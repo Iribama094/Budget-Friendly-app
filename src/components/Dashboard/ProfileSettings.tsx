@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeftIcon, BellIcon, ClockIcon, TagIcon, MoonIcon, FileTextIcon, MailIcon, AlertTriangleIcon, ChevronRightIcon, LogOutIcon, HelpCircleIcon } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 interface ProfileSettingsProps {
   onBack: () => void;
 }
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   onBack
 }) => {
+  const { isDarkMode, toggleDarkMode } = useTheme();
+
   // Settings state
   const [notifications, setNotifications] = useState(true);
   const [reminders, setReminders] = useState(true);
   const [autoCategories, setAutoCategories] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [weeklySummaries, setWeeklySummaries] = useState(true);
   const [overspendAlerts, setOverspendAlerts] = useState(true);
   // Mock user data
   const user = {
-    name: 'Samuel Okonkwo',
-    email: 'samuel@example.com',
-    netWorth: 1250000,
+    name: 'Daniella Alfred',
+    email: 'Daniella@example.com',
+    netWorth: 12250000,
     currency: '₦'
   };
   // Toggle function
@@ -34,7 +36,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         setAutoCategories(value);
         break;
       case 'darkMode':
-        setDarkMode(value);
+        toggleDarkMode();
         break;
       case 'weeklySummaries':
         setWeeklySummaries(value);
@@ -44,190 +46,210 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         break;
     }
   };
-  return <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      <div className="max-w-md mx-auto px-4 py-6">
+  return <div className="w-full min-h-screen py-6 pb-24 relative">
+      <div className="max-w-md mx-auto px-4">
         {/* Header */}
         <div className="flex items-center mb-8">
-          <button className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center mr-4" onClick={onBack}>
+          <motion.button
+            className="w-12 h-12 rounded-2xl bg-white/80 backdrop-blur-sm shadow-soft flex items-center justify-center mr-4 border border-white/20"
+            onClick={onBack}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <ArrowLeftIcon className="w-5 h-5 text-gray-600" />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-800">
+          </motion.button>
+          <h1 className="text-2xl font-bold font-display bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
             Profile & Settings
           </h1>
         </div>
         {/* Profile Card */}
-        <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
+        <motion.div
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-large mb-6 border border-white/20 dark:border-gray-700/20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <div className="flex items-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mr-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mr-4 shadow-glow">
               {user.name.split(' ').map(n => n[0]).join('')}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
-              <p className="text-gray-600 text-sm">{user.email}</p>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">{user.name}</h2>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">{user.email}</p>
             </div>
           </div>
-          <div className="mt-5 pt-5 border-t border-gray-100">
+          <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Net Worth</p>
-              <p className="text-xl font-bold text-gray-800">
+              <p className="text-gray-600 dark:text-gray-400">Net Worth</p>
+              <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
                 {user.currency}
                 {user.netWorth.toLocaleString()}
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
         {/* General Settings */}
-        <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
-          <h3 className="text-lg font-medium text-gray-800 p-5 border-b border-gray-100">
+        <motion.div
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-soft mb-6 overflow-hidden border border-white/20 dark:border-gray-700/20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 p-5 border-b border-gray-100/50 dark:border-gray-700/50">
             General Settings
           </h3>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100/50 dark:divide-gray-700/50">
             {/* Notifications */}
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                  <BellIcon className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center mr-3 border border-primary-200">
+                  <BellIcon className="w-5 h-5 text-primary-600" />
                 </div>
-                <span className="text-gray-800">Notifications</span>
+                <span className="text-gray-800 dark:text-gray-200 font-medium">Notifications</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={notifications} onChange={e => handleToggle('notifications', e.target.checked)} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
               </label>
             </div>
             {/* Reminders */}
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                  <ClockIcon className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 rounded-xl bg-secondary-100 flex items-center justify-center mr-3 border border-secondary-200">
+                  <ClockIcon className="w-5 h-5 text-secondary-600" />
                 </div>
-                <span className="text-gray-800">Reminders</span>
+                <span className="text-gray-800 dark:text-gray-200 font-medium">Reminders</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={reminders} onChange={e => handleToggle('reminders', e.target.checked)} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary-500"></div>
               </label>
             </div>
             {/* Auto-Categorize */}
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
-                  <TagIcon className="w-5 h-5 text-orange-600" />
+                <div className="w-10 h-10 rounded-xl bg-accent-100 flex items-center justify-center mr-3 border border-accent-200">
+                  <TagIcon className="w-5 h-5 text-accent-600" />
                 </div>
-                <span className="text-gray-800">Auto-Categorize</span>
+                <span className="text-gray-800 dark:text-gray-200 font-medium">Auto-Categorize</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={autoCategories} onChange={e => handleToggle('autoCategories', e.target.checked)} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-500"></div>
               </label>
             </div>
             {/* Dark Mode */}
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
-                  <MoonIcon className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mr-3 border border-gray-200">
+                  <MoonIcon className="w-5 h-5 text-gray-600" />
                 </div>
-                <span className="text-gray-800">Dark Mode</span>
+                <span className="text-gray-800 dark:text-gray-200 font-medium">Dark Mode</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={darkMode} onChange={e => handleToggle('darkMode', e.target.checked)} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <input type="checkbox" className="sr-only peer" checked={isDarkMode} onChange={e => handleToggle('darkMode', e.target.checked)} />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-600"></div>
               </label>
             </div>
           </div>
-        </div>
+        </motion.div>
         {/* Smart Options */}
-        <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
-          <h3 className="text-lg font-medium text-gray-800 p-5 border-b border-gray-100">
+        <motion.div
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-soft mb-6 overflow-hidden border border-white/20 dark:border-gray-700/20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 p-5 border-b border-gray-100/50 dark:border-gray-700/50">
             Smart Options
           </h3>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100/50 dark:divide-gray-700/50">
             {/* Weekly Summaries */}
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                  <MailIcon className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center mr-3 border border-primary-200">
+                  <MailIcon className="w-5 h-5 text-primary-600" />
                 </div>
                 <div>
-                  <span className="text-gray-800 block">
+                  <span className="text-gray-800 dark:text-gray-200 font-medium block">
                     Send me weekly summaries
                   </span>
-                  <span className="text-gray-500 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">
                     Receive a report every Sunday
                   </span>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={weeklySummaries} onChange={e => handleToggle('weeklySummaries', e.target.checked)} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
               </label>
             </div>
             {/* Overspend Alerts */}
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
-                  <AlertTriangleIcon className="w-5 h-5 text-red-600" />
+                <div className="w-10 h-10 rounded-xl bg-error-100 flex items-center justify-center mr-3 border border-error-200">
+                  <AlertTriangleIcon className="w-5 h-5 text-error-600" />
                 </div>
                 <div>
-                  <span className="text-gray-800 block">
+                  <span className="text-gray-800 dark:text-gray-200 font-medium block">
                     Alert me when I overspend
                   </span>
-                  <span className="text-gray-500 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">
                     Get notified when exceeding category budget
                   </span>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={overspendAlerts} onChange={e => handleToggle('overspendAlerts', e.target.checked)} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-error-500"></div>
               </label>
             </div>
           </div>
-        </div>
+        </motion.div>
         {/* Data Options */}
-        <div className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
-          <h3 className="text-lg font-medium text-gray-800 p-5 border-b border-gray-100">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-sm mb-6 overflow-hidden border border-white/20 dark:border-gray-700/20">
+          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 p-5 border-b border-gray-100 dark:border-gray-700">
             Data Options
           </h3>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {/* Connect Bank */}
-            <button className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+            <button className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
                   <div className="w-5 h-5 text-green-600" />
                 </div>
-                <span className="text-gray-800">Connect Bank Account</span>
+                <span className="text-gray-800 dark:text-gray-200">Connect Bank Account</span>
               </div>
-              <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+              <ChevronRightIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
             </button>
             {/* Export Data */}
-            <button className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+            <button className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
                   <FileTextIcon className="w-5 h-5 text-blue-600" />
                 </div>
-                <span className="text-gray-800">Export Data (CSV/PDF)</span>
+                <span className="text-gray-800 dark:text-gray-200">Export Data (CSV/PDF)</span>
               </div>
-              <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+              <ChevronRightIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
             </button>
           </div>
         </div>
         {/* Support & Logout */}
         <div className="space-y-3 mb-6">
-          <button className="w-full flex items-center p-4 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors">
+          <button className="w-full flex items-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-white/20 dark:border-gray-700/20">
             <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
               <HelpCircleIcon className="w-5 h-5 text-purple-600" />
             </div>
-            <span className="text-gray-800">Help & Support</span>
+            <span className="text-gray-800 dark:text-gray-200">Help & Support</span>
           </button>
-          <button className="w-full flex items-center p-4 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors">
+          <button className="w-full flex items-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-white/20 dark:border-gray-700/20">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
               <LogOutIcon className="w-5 h-5 text-red-600" />
             </div>
-            <span className="text-gray-800">Log Out</span>
+            <span className="text-gray-800 dark:text-gray-200">Log Out</span>
           </button>
         </div>
-        <p className="text-center text-gray-500 text-sm">
+        <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
           BudgetFriendly v1.0.0
         </p>
       </div>

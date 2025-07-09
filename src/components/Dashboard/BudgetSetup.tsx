@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeftIcon, SparklesIcon, InfoIcon, CheckCircleIcon } from 'lucide-react';
-import confetti from 'canvas-confetti';
 interface BudgetSetupProps {
   onBack: () => void;
 }
@@ -27,23 +26,7 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
     if (isNowBalanced && !isBalanced && income > 0) {
       setIsBalanced(true);
       setShowConfetti(true);
-      // Trigger confetti
-      const end = Date.now() + 3000;
-      const runConfetti = () => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: {
-            y: 0.6
-          },
-          colors: ['#3b82f6', '#8b5cf6', '#10b981']
-        });
-        if (Date.now() < end) {
-          requestAnimationFrame(runConfetti);
-        }
-      };
-      runConfetti();
-      // Hide confetti message after delay
+      // Hide success message after delay
       setTimeout(() => {
         setShowConfetti(false);
       }, 5000);
@@ -60,14 +43,14 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
     setSavingsGoal(smartSavings);
     setFreeSpend(smartFree);
   };
-  return <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-6">
+  return <div className="w-full min-h-screen py-6 pb-24 relative">
       <div className="max-w-md mx-auto px-4">
         {/* Header */}
         <div className="flex items-center mb-8">
           <button className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center mr-4" onClick={onBack}>
             <ArrowLeftIcon className="w-5 h-5 text-gray-600" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Budget Setup</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Budget Setup</h1>
         </div>
         {/* Success Message */}
         <AnimatePresence>
@@ -88,14 +71,14 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
             </motion.div>}
         </AnimatePresence>
         {/* Smart Balance Toggle */}
-        <div className="flex items-center justify-between bg-white rounded-xl p-4 mb-6 shadow-sm">
+        <div className="flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-6 shadow-sm border border-white/20 dark:border-gray-700/20">
           <div className="flex items-center">
             <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
               <SparklesIcon className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <h3 className="font-medium text-gray-800">Smart Balance</h3>
-              <p className="text-xs text-gray-500">
+              <h3 className="font-medium text-gray-800 dark:text-gray-200">Smart Balance</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 AI-recommended budget allocation
               </p>
             </div>
@@ -111,8 +94,8 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
           </label>
         </div>
         {/* Budget Graph */}
-        <div className="bg-white rounded-xl p-4 mb-6 shadow-sm">
-          <h3 className="font-medium text-gray-800 mb-3">Budget Allocation</h3>
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-6 shadow-sm border border-white/20 dark:border-gray-700/20">
+          <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-3">Budget Allocation</h3>
           <div className="h-8 w-full rounded-lg overflow-hidden flex mb-2">
             <motion.div className="bg-blue-500 h-full" animate={{
             width: `${essentialPercent}%`
@@ -146,10 +129,10 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
           </div>
         </div>
         {/* Income Input */}
-        <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-4 shadow-sm border border-white/20 dark:border-gray-700/20">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-medium text-gray-800">Monthly Income</h3>
-            <div className="text-lg font-bold text-gray-800">
+            <h3 className="font-medium text-gray-800 dark:text-gray-200">Monthly Income</h3>
+            <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
               ₦{income.toLocaleString()}
             </div>
           </div>
@@ -158,18 +141,18 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
         {/* Budget Category Cards */}
         <div className="space-y-4">
           {/* Essential Spending */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-blue-500">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border-l-4 border-blue-500 border border-white/20 dark:border-gray-700/20">
             <div className="flex justify-between items-center mb-2">
               <div>
-                <h3 className="font-medium text-gray-800">
+                <h3 className="font-medium text-gray-800 dark:text-gray-200">
                   Essential Spending
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Rent, utilities, groceries
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold text-gray-800">
+                <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
                   ₦{essentialSpend.toLocaleString()}
                 </div>
                 <div className="text-xs text-blue-600">
@@ -185,14 +168,14 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
             </div>
           </div>
           {/* Savings Goal */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-purple-500">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border-l-4 border-purple-500 border border-white/20 dark:border-gray-700/20">
             <div className="flex justify-between items-center mb-2">
               <div>
-                <h3 className="font-medium text-gray-800">Savings Goal</h3>
-                <p className="text-xs text-gray-500">Future investments</p>
+                <h3 className="font-medium text-gray-800 dark:text-gray-200">Savings Goal</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Future investments</p>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold text-gray-800">
+                <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
                   ₦{savingsGoal.toLocaleString()}
                 </div>
                 <div className="text-xs text-purple-600">
@@ -208,16 +191,16 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
             </div>
           </div>
           {/* Free Spending */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-green-500">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border-l-4 border-green-500 border border-white/20 dark:border-gray-700/20">
             <div className="flex justify-between items-center mb-2">
               <div>
-                <h3 className="font-medium text-gray-800">Free Spending</h3>
-                <p className="text-xs text-gray-500">
+                <h3 className="font-medium text-gray-800 dark:text-gray-200">Free Spending</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Entertainment, dining out
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold text-gray-800">
+                <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
                   ₦{freeSpend.toLocaleString()}
                 </div>
                 <div className="text-xs text-green-600">
@@ -233,11 +216,11 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
             </div>
           </div>
           {/* Remaining Balance */}
-          <div className={`bg-white rounded-xl p-4 shadow-sm ${remainingAmount === 0 ? 'border-l-4 border-green-500' : remainingAmount > 0 ? 'border-l-4 border-blue-500' : 'border-l-4 border-red-500'}`}>
+          <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-white/20 dark:border-gray-700/20 ${remainingAmount === 0 ? 'border-l-4 border-green-500' : remainingAmount > 0 ? 'border-l-4 border-blue-500' : 'border-l-4 border-red-500'}`}>
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-medium text-gray-800">Remaining Balance</h3>
-                <p className="text-xs text-gray-500">
+                <h3 className="font-medium text-gray-800 dark:text-gray-200">Remaining Balance</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {remainingAmount === 0 ? 'Perfectly balanced!' : remainingAmount > 0 ? 'Still unallocated' : 'Overbudget!'}
                 </p>
               </div>
@@ -248,10 +231,17 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
           </div>
         </div>
         {/* Save Button */}
-        <motion.button className={`w-full py-4 rounded-xl mt-8 font-medium text-white ${isBalanced ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-gray-400'}`} whileTap={{
-        scale: 0.98
-      }} disabled={!isBalanced}>
-          Save Budget Plan
+        <motion.button
+          className={`w-full py-4 rounded-2xl mt-8 font-semibold text-white shadow-large ${
+            isBalanced
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 hover:shadow-glow'
+              : 'bg-gray-400'
+          }`}
+          whileTap={{ scale: 0.98 }}
+          whileHover={isBalanced ? { scale: 1.02 } : {}}
+          disabled={!isBalanced}
+        >
+          Save Budget Plan ✨
         </motion.button>
       </div>
     </div>;

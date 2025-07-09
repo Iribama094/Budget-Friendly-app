@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
-import { PlusIcon, MicIcon, ChevronDownIcon, BarChart3Icon, PieChartIcon, TargetIcon, UserIcon, MessageSquareIcon } from 'lucide-react';
+import { PlusIcon, MicIcon, ChevronDownIcon, MessageSquareIcon } from 'lucide-react';
 import { BudgetRing } from './BudgetRing';
 import { InfoTile } from './InfoTile';
 import { QuoteDisplay } from './QuoteDisplay';
@@ -10,6 +10,7 @@ import { Analytics } from './Analytics';
 import { Goals } from './Goals';
 import { ProfileSettings } from './ProfileSettings';
 import { SmartAssistant } from './SmartAssistant';
+import { BottomNavigation } from '../Navigation/BottomNavigation';
 export const Dashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [voiceActive, setVoiceActive] = useState(false);
@@ -102,7 +103,7 @@ export const Dashboard = () => {
   if (currentScreen === 'assistant') {
     return <SmartAssistant onBack={navigateToDashboard} />;
   }
-  return <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pb-20">
+  return <div className="w-full min-h-screen pb-24 relative">
       <motion.div drag="y" dragConstraints={{
       top: 0,
       bottom: 0
@@ -111,12 +112,12 @@ export const Dashboard = () => {
         <motion.div className="flex items-center justify-center h-16 w-full" style={{
         opacity: pullProgress
       }}>
-          <ChevronDownIcon className="text-purple-600 animate-bounce" style={{
+          <ChevronDownIcon className="text-secondary-600 animate-bounce" style={{
           opacity: refreshing ? 0 : 1,
           display: refreshing ? 'none' : 'block'
         }} />
           {refreshing && <div className="flex space-x-2">
-              {['₦', '$', '€', '£', '¥'].map((currency, i) => <motion.div key={currency} className="text-lg font-bold text-purple-600" animate={{
+              {['₦', '$', '€', '£', '¥'].map((currency, i) => <motion.div key={currency} className="text-lg font-bold text-secondary-600" animate={{
             y: [0, -10, 0],
             opacity: [0.4, 1, 0.4]
           }} transition={{
@@ -131,32 +132,59 @@ export const Dashboard = () => {
         </motion.div>
         <div className="px-6 pt-4 pb-20">
           {/* Header with user greeting */}
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Hello, Sam</h1>
-              <p className="text-gray-600">Let's manage your money</p>
-            </div>
-            <motion.div className="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center cursor-pointer" whileTap={{
-            scale: 0.95
-          }} onClick={() => setCurrentScreen('profile')}>
-              <span className="text-purple-700 font-medium">S</span>
+          <div className="flex justify-between items-center mb-8">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="text-3xl font-bold font-display bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
+                Hello, Daniella
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 font-medium mt-1">Let's manage your money smartly</p>
+            </motion.div>
+            <motion.div
+              className="w-12 h-12 bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-2xl flex items-center justify-center cursor-pointer shadow-soft border border-white/20"
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              onClick={() => setCurrentScreen('profile')}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <span className="text-white font-bold text-lg">D</span>
             </motion.div>
           </div>
           {/* Smart Assistant Quick Access */}
-          <motion.div className="bg-white rounded-xl p-4 mb-6 shadow-sm flex items-center cursor-pointer" whileHover={{
-          y: -2
-        }} whileTap={{
-          scale: 0.98
-        }} onClick={() => setCurrentScreen('assistant')}>
-            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-4">
-              <MessageSquareIcon className="w-6 h-6 text-purple-600" />
+          <motion.div
+            className="relative bg-gradient-to-r from-primary-500 to-secondary-500 rounded-2xl p-6 mb-8 shadow-large flex items-center cursor-pointer overflow-hidden"
+            whileHover={{ y: -4, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setCurrentScreen('assistant')}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            {/* Background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
+
+            <div className="relative w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mr-4 border border-white/30">
+              <MessageSquareIcon className="w-7 h-7 text-white" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-gray-800">Smart Assistant</h3>
-              <p className="text-sm text-gray-600">
+            <div className="relative flex-1">
+              <h3 className="font-bold font-display text-white text-lg">Budget Buddy</h3>
+              <p className="text-white/80 text-sm font-medium">
                 Ask me anything about your finances
               </p>
             </div>
+
+            {/* Sparkle effect */}
+            <motion.div
+              className="absolute top-4 right-4 w-2 h-2 bg-white rounded-full"
+              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
           </motion.div>
           {/* Quote Display */}
           <QuoteDisplay />
@@ -165,52 +193,81 @@ export const Dashboard = () => {
             <BudgetRing percentage={Math.round(budgetData.spent / budgetData.total * 100)} spent={budgetData.spent} total={budgetData.total} currency={budgetData.currency} />
           </div>
           {/* Info Tiles */}
-          <div className="grid grid-cols-2 gap-4 mt-8">
-            <InfoTile title="Today's Spend" value={`${budgetData.currency}${budgetData.todaySpend.toLocaleString()}`} icon="calendar" color="blue" />
-            <InfoTile title="Remaining Budget" value={`${budgetData.currency}${budgetData.remainingBudget.toLocaleString()}`} icon="wallet" color="green" />
-            <InfoTile title="Weekly Progress" value={`${budgetData.weeklyProgress}%`} icon="chart" color="purple" className="col-span-2">
-              <div className="w-full h-2 bg-gray-200 rounded-full mt-2">
-                <motion.div className="h-2 bg-purple-600 rounded-full" initial={{
-                width: 0
-              }} animate={{
-                width: `${budgetData.weeklyProgress}%`
-              }} transition={{
-                duration: 1,
-                ease: 'easeOut'
-              }} />
+          <motion.div
+            className="grid grid-cols-2 gap-4 mt-8"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+          >
+            <InfoTile
+              title="Today's Spend"
+              value={`${budgetData.currency}${budgetData.todaySpend.toLocaleString()}`}
+              icon="dollar"
+              color="orange"
+            />
+            <InfoTile
+              title="Remaining Budget"
+              value={`${budgetData.currency}${budgetData.remainingBudget.toLocaleString()}`}
+              icon="wallet"
+              color="green"
+            />
+            <InfoTile
+              title="Weekly Progress"
+              value={`${budgetData.weeklyProgress}%`}
+              icon="trending"
+              color="purple"
+              className="col-span-2"
+            >
+              <div className="w-full h-3 bg-gray-100 rounded-full mt-3 overflow-hidden">
+                <motion.div
+                  className="h-3 bg-gradient-to-r from-secondary-500 to-secondary-600 rounded-full shadow-glow"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${budgetData.weeklyProgress}%` }}
+                  transition={{ duration: 1.5, ease: 'easeOut', delay: 0.8 }}
+                />
               </div>
             </InfoTile>
-          </div>
-          {/* Action Buttons */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <button className="py-3 flex flex-col items-center justify-center text-purple-700 bg-purple-100 rounded-xl font-medium" onClick={() => setCurrentScreen('budget')}>
-              <BarChart3Icon className="w-5 h-5 mb-1" />
-              <span className="text-xs">Budget</span>
-            </button>
-            <button className="py-3 flex flex-col items-center justify-center text-blue-700 bg-blue-100 rounded-xl font-medium" onClick={() => setCurrentScreen('analytics')}>
-              <PieChartIcon className="w-5 h-5 mb-1" />
-              <span className="text-xs">Analytics</span>
-            </button>
-            <button className="py-3 flex flex-col items-center justify-center text-green-700 bg-green-100 rounded-xl font-medium" onClick={() => setCurrentScreen('goals')}>
-              <TargetIcon className="w-5 h-5 mb-1" />
-              <span className="text-xs">Goals</span>
-            </button>
-          </div>
+          </motion.div>
+          {/* Quick Actions */}
+          <motion.div
+            className="grid grid-cols-2 gap-4 mt-8 mb-24"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+          >
+            <motion.button
+              className="py-6 flex flex-col items-center justify-center text-primary-700 bg-gradient-to-br from-primary-50 to-primary-100 rounded-3xl font-medium border border-primary-200 shadow-soft hover:shadow-medium transition-all duration-300"
+              onClick={() => setShowModal(true)}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <PlusIcon className="w-8 h-8 mb-3 text-primary-600" />
+              <span className="text-sm font-semibold">Add Transaction</span>
+            </motion.button>
+
+            <motion.button
+              className="py-6 flex flex-col items-center justify-center text-secondary-700 bg-gradient-to-br from-secondary-50 to-secondary-100 rounded-3xl font-medium border border-secondary-200 shadow-soft hover:shadow-medium transition-all duration-300"
+              onClick={handleVoiceInput}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <motion.div
+                animate={voiceActive ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.5, repeat: voiceActive ? Infinity : 0 }}
+              >
+                <MicIcon className={`w-8 h-8 mb-3 ${voiceActive ? 'text-error-500' : 'text-secondary-600'}`} />
+              </motion.div>
+              <span className="text-sm font-semibold">Voice Input</span>
+            </motion.button>
+          </motion.div>
         </div>
       </motion.div>
-      {/* Add Transaction Button */}
-      <div className="fixed bottom-8 left-0 right-0 flex justify-center items-center space-x-4">
-        <motion.button className="flex items-center justify-center w-14 h-14 bg-white rounded-full shadow-lg border-2 border-purple-200" whileTap={{
-        scale: 0.9
-      }} onClick={handleVoiceInput}>
-          <MicIcon className={`w-6 h-6 ${voiceActive ? 'text-red-500 animate-pulse' : 'text-purple-600'}`} />
-        </motion.button>
-        <motion.button className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg text-white" whileTap={{
-        scale: 0.9
-      }} onClick={() => setShowModal(true)}>
-          <PlusIcon className="w-8 h-8" />
-        </motion.button>
-      </div>
+      {/* Bottom Navigation */}
+      <BottomNavigation
+        currentScreen={currentScreen}
+        onScreenChange={setCurrentScreen}
+      />
+
       {/* Transaction Modal */}
       {showModal && <AddTransactionModal onClose={() => setShowModal(false)} />}
     </div>;

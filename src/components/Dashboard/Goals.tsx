@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeftIcon, PlusIcon, CheckCircleIcon, LockIcon, UnlockIcon, TrendingUpIcon, CalendarIcon } from 'lucide-react';
-import confetti from 'canvas-confetti';
 interface GoalsProps {
   onBack: () => void;
 }
@@ -86,15 +85,6 @@ export const Goals: React.FC<GoalsProps> = ({
     const goalToComplete = goals.find(goal => goal.id === id);
     if (goalToComplete) {
       setShowCompletedMessage(goalToComplete.name);
-      // Trigger confetti
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: {
-          y: 0.6
-        },
-        colors: ['#3b82f6', '#8b5cf6', '#10b981']
-      });
       // Update goal status
       setGoals(goals.map(goal => goal.id === id ? {
         ...goal,
@@ -107,37 +97,44 @@ export const Goals: React.FC<GoalsProps> = ({
       }, 5000);
     }
   };
-  return <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-6">
+  return <div className="w-full min-h-screen py-6 pb-24 relative">
       <div className="max-w-md mx-auto px-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <button className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center mr-4" onClick={onBack}>
+            <motion.button
+              className="w-12 h-12 rounded-2xl bg-white/80 backdrop-blur-sm shadow-soft flex items-center justify-center mr-4 border border-white/20"
+              onClick={onBack}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <ArrowLeftIcon className="w-5 h-5 text-gray-600" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-800">Your Goals</h1>
+            </motion.button>
+            <h1 className="text-2xl font-bold font-display bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
+              Your Goals
+            </h1>
           </div>
-          <button className="w-10 h-10 rounded-full bg-purple-600 shadow-sm flex items-center justify-center">
+          <motion.button
+            className="w-12 h-12 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 shadow-large flex items-center justify-center border border-white/20"
+            whileHover={{ scale: 1.05, boxShadow: '0 0 25px rgba(16, 185, 129, 0.4)' }}
+            whileTap={{ scale: 0.95 }}
+          >
             <PlusIcon className="w-5 h-5 text-white" />
-          </button>
+          </motion.button>
         </div>
         {/* Completion Message */}
         <AnimatePresence>
-          {showCompletedMessage && <motion.div className="bg-green-100 border border-green-200 rounded-xl p-4 mb-6 flex items-center" initial={{
-          opacity: 0,
-          y: -20
-        }} animate={{
-          opacity: 1,
-          y: 0
-        }} exit={{
-          opacity: 0,
-          y: -20
-        }}>
-              <CheckCircleIcon className="w-6 h-6 text-green-600 mr-3" />
+          {showCompletedMessage && <motion.div
+            className="bg-gradient-to-r from-primary-50 to-success-50 border border-primary-200 rounded-2xl p-4 mb-6 flex items-center shadow-soft backdrop-blur-sm"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+              <CheckCircleIcon className="w-6 h-6 text-primary-600 mr-3" />
               <div>
-                <p className="text-green-800 font-medium">You did it!</p>
-                <p className="text-green-700 text-sm">
-                  Time to book that flight.
+                <p className="text-primary-800 font-semibold">Goal Completed!</p>
+                <p className="text-primary-700 text-sm">
+                  Goal completed successfully!
                 </p>
               </div>
             </motion.div>}
@@ -145,9 +142,12 @@ export const Goals: React.FC<GoalsProps> = ({
         {/* Goals List */}
         <div className="space-y-6">
           {goals.map(goal => <div key={goal.id}>
-              <motion.div className="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer" whileHover={{
-            y: -2
-          }} onClick={() => handleGoalClick(goal.id)}>
+              <motion.div
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-soft overflow-hidden cursor-pointer border border-white/20 dark:border-gray-700/20"
+                whileHover={{ y: -4, scale: 1.02, boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.15)' }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleGoalClick(goal.id)}
+              >
                 {/* Goal Card */}
                 <div className="relative h-32">
                   <img src={goal.image} alt={goal.name} className="w-full h-full object-cover" />
@@ -184,71 +184,69 @@ export const Goals: React.FC<GoalsProps> = ({
                       {goal.targetAmount.toLocaleString()}
                     </div>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <motion.div className="h-full bg-gradient-to-r from-blue-500 to-purple-600" initial={{
-                  width: 0
-                }} animate={{
-                  width: `${goal.currentAmount / goal.targetAmount * 100}%`
-                }} transition={{
-                  duration: 1,
-                  ease: 'easeOut'
-                }} />
+                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 shadow-glow"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${goal.currentAmount / goal.targetAmount * 100}%` }}
+                      transition={{ duration: 1.5, ease: 'easeOut' }}
+                    />
                   </div>
                 </div>
               </motion.div>
               {/* Expanded View */}
               <AnimatePresence>
-                {expandedGoal === goal.id && <motion.div className="bg-white mt-2 rounded-xl p-4 shadow-sm" initial={{
-              opacity: 0,
-              height: 0
-            }} animate={{
-              opacity: 1,
-              height: 'auto'
-            }} exit={{
-              opacity: 0,
-              height: 0
-            }} transition={{
-              duration: 0.3
-            }}>
-                    <h4 className="font-medium text-gray-800 mb-3">Timeline</h4>
+                {expandedGoal === goal.id && <motion.div
+                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm mt-2 rounded-2xl p-4 shadow-soft border border-white/20 dark:border-gray-700/20"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                    <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-3">Timeline</h4>
                     {/* Goal Timeline */}
                     <div className="space-y-3 mb-4">
                       <div className="flex items-start">
-                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                          <CalendarIcon className="w-4 h-4 text-green-600" />
+                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center mr-3 border border-primary-200">
+                          <CalendarIcon className="w-4 h-4 text-primary-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Goal Started</p>
-                          <p className="text-xs text-gray-500">May 15, 2023</p>
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Goal Started</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">May 15, 2023</p>
                         </div>
                       </div>
                       <div className="flex items-start">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                          <TrendingUpIcon className="w-4 h-4 text-blue-600" />
+                        <div className="w-8 h-8 rounded-full bg-secondary-100 flex items-center justify-center mr-3 border border-secondary-200">
+                          <TrendingUpIcon className="w-4 h-4 text-secondary-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Target Date</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Target Date</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {formatDate(goal.deadline)}
                           </p>
                         </div>
                       </div>
                       {goal.isCompleted && <div className="flex items-start">
-                          <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3">
-                            <CheckCircleIcon className="w-4 h-4 text-purple-600" />
+                          <div className="w-8 h-8 rounded-full bg-accent-100 flex items-center justify-center mr-3 border border-accent-200">
+                            <CheckCircleIcon className="w-4 h-4 text-accent-600" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium">
+                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                               Goal Completed
                             </p>
-                            <p className="text-xs text-gray-500">Today</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Today</p>
                           </div>
                         </div>}
                     </div>
                     {/* Action Button */}
-                    {!goal.isCompleted && <button className="w-full py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium" onClick={() => completeGoal(goal.id)}>
+                    {!goal.isCompleted && <motion.button
+                      className="w-full py-3 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold shadow-soft"
+                      onClick={() => completeGoal(goal.id)}
+                      whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(16, 185, 129, 0.4)' }}
+                      whileTap={{ scale: 0.98 }}
+                    >
                         Add Funds
-                      </button>}
+                      </motion.button>}
                   </motion.div>}
               </AnimatePresence>
             </div>)}
