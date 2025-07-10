@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X as XIcon, Calendar as CalendarIcon, FileText as FileTextIcon, Camera as CameraIcon, CheckCircle as CheckCircleIcon, Coffee as CoffeeIcon, ShoppingBag as ShoppingBagIcon, Car as CarIcon, Zap as ZapIcon, Briefcase as BriefcaseIcon, DollarSign as DollarSignIcon, Gift as GiftIcon, TrendingUp as TrendingUpIcon, Clock as ClockIcon, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { addTransaction, validateAmount, validateDescription, validateCategory } from '../../utils/dataManager';
 interface AddTransactionModalProps {
   onClose: () => void;
 }
@@ -23,6 +24,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [slideProgress, setSlideProgress] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Define category options with new theme
   const expenseCategories: CategoryOption[] = [{
     id: 'food',
@@ -84,6 +87,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   }, []);
   // Handle number pad input
   const handleNumberInput = (value: string) => {
+    // Clear amount error when user starts typing
+    if (errors.amount) {
+      setErrors(prev => ({ ...prev, amount: '' }));
+    }
+
     if (value === 'backspace') {
       if (amount.length > 0) {
         const newAmount = amount.slice(0, -1);
@@ -118,13 +126,60 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       handleSave();
     }
   };
-  // Save transaction
+  // Save transaction with validation
   const handleSave = () => {
-    if (!amount || !selectedCategory) return;
-    setShowSuccess(true);
-    setTimeout(() => {
-      onClose();
-    }, 1500);
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    const newErrors: {[key: string]: string} = {};
+
+    // Validate amount
+    const amountValidation = validateAmount(amount);
+    if (!amountValidation.isValid) {
+      newErrors.amount = amountValidation.error!;
+    }
+
+    // Validate category
+    const categoryValidation = validateCategory(selectedCategory || '');
+    if (!categoryValidation.isValid) {
+      newErrors.category = categoryValidation.error!;
+    }
+
+    // Validate description (notes)
+    const descriptionValidation = validateDescription(notes || 'Transaction');
+    if (!descriptionValidation.isValid) {
+      newErrors.notes = descriptionValidation.error!;
+    }
+
+    setErrors(newErrors);
+
+    // If there are errors, stop submission
+    if (Object.keys(newErrors).length > 0) {
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // Save transaction to localStorage
+      const transaction = addTransaction({
+        type: transactionType,
+        amount: parseFloat(amount),
+        category: selectedCategory!,
+        description: notes || 'Transaction',
+        date: date.toISOString().split('T')[0]
+      });
+
+      console.log('Transaction saved:', transaction);
+      setShowSuccess(true);
+
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      setErrors({ general: 'Failed to save transaction. Please try again.' });
+      setIsSubmitting(false);
+    }
   };
   return <motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4" initial={{
     opacity: 0
@@ -226,6 +281,17 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 <span className="text-2xl font-bold">{displayAmount}</span>
               </motion.div>
 
+              {/* Amount Error */}
+              {errors.amount && (
+                <motion.div
+                  className="text-center mt-1"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <span className="text-xs text-red-500 font-medium">{errors.amount}</span>
+                </motion.div>
+              )}
+
               {/* Smart Suggestion */}
               <AnimatePresence>
                 {showSuggestion && transactionType === 'expense' && <motion.div className="mx-4 mb-3 p-3 bg-primary-50 rounded-xl border border-primary-200 flex items-center shadow-soft" initial={{
@@ -275,12 +341,29 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     }`}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedCategory(category.id)}
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      // Clear category error when user selects
+                      if (errors.category) {
+                        setErrors(prev => ({ ...prev, category: '' }));
+                      }
+                    }}
                   >
                       <span className="mr-1">{category.icon}</span>
                       <span className="text-xs font-medium">{category.name}</span>
                     </motion.button>)}
                 </div>
+
+                {/* Category Error */}
+                {errors.category && (
+                  <motion.div
+                    className="mt-1"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <span className="text-xs text-red-500 font-medium">{errors.category}</span>
+                  </motion.div>
+                )}
               </div>
 
               {/* Additional Details Toggle */}
@@ -330,8 +413,30 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       </label>
                       <div className="flex items-start border border-gray-200 rounded-xl p-2 bg-gray-50/50">
                         <FileTextIcon className="w-4 h-4 text-gray-500 mr-2 mt-1" />
-                        <textarea className="flex-1 outline-none text-xs resize-none h-12 bg-transparent" placeholder="Add notes here..." value={notes} onChange={e => setNotes(e.target.value)} />
+                        <textarea
+                          className="flex-1 outline-none text-xs resize-none h-12 bg-transparent"
+                          placeholder="Add notes here..."
+                          value={notes}
+                          onChange={e => {
+                            setNotes(e.target.value);
+                            // Clear notes error when user types
+                            if (errors.notes) {
+                              setErrors(prev => ({ ...prev, notes: '' }));
+                            }
+                          }}
+                        />
                       </div>
+
+                      {/* Notes Error */}
+                      {errors.notes && (
+                        <motion.div
+                          className="mt-1"
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          <span className="text-xs text-red-500 font-medium">{errors.notes}</span>
+                        </motion.div>
+                      )}
                     </div>
 
                     {/* Receipt Upload */}
@@ -372,19 +477,44 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   </motion.button>)}
               </div>
 
+              {/* General Error Display */}
+              {errors.general && (
+                <motion.div
+                  className="px-4 mb-2"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                    <span className="text-xs text-red-600 font-medium">{errors.general}</span>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Slide to Save */}
               <div className="px-4 pb-4">
-                <div className="relative h-12 bg-gray-100/80 rounded-2xl flex items-center px-4 border border-gray-200">
+                <div className={`relative h-12 bg-gray-100/80 rounded-2xl flex items-center px-4 border border-gray-200 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <div className="absolute left-0 top-0 bottom-0 rounded-2xl bg-gradient-to-r from-primary-500 to-secondary-500 shadow-glow transition-all duration-300" style={{
                 width: `${slideProgress}%`
               }} />
                   <div className="absolute left-4 right-4 flex items-center justify-between z-10">
                     <span className={`text-xs font-semibold transition-colors duration-300 ${slideProgress > 50 ? 'text-white' : 'text-gray-700'}`}>
-                      Slide to save
+                      {isSubmitting ? 'Saving...' : 'Slide to save'}
                     </span>
-                    <ChevronRightIcon className={`w-4 h-4 transition-colors duration-300 ${slideProgress > 50 ? 'text-white' : 'text-gray-600'}`} />
+                    {isSubmitting ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <ChevronRightIcon className={`w-4 h-4 transition-colors duration-300 ${slideProgress > 50 ? 'text-white' : 'text-gray-600'}`} />
+                    )}
                   </div>
-                  <input type="range" min="0" max="100" value={slideProgress} onChange={handleSlideChange} className="absolute inset-0 opacity-0 cursor-pointer w-full" />
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={slideProgress}
+                    onChange={handleSlideChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                    disabled={isSubmitting}
+                  />
                 </div>
               </div>
             </div>}

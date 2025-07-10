@@ -1,63 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeftIcon, PlusIcon, CheckCircleIcon, LockIcon, UnlockIcon, TrendingUpIcon, CalendarIcon } from 'lucide-react';
+import { ArrowLeftIcon, PlusIcon, CheckCircleIcon, LockIcon, UnlockIcon, TrendingUpIcon, CalendarIcon, TargetIcon, ShieldIcon, PlaneIcon, LaptopIcon } from 'lucide-react';
+import { loadUserData, saveUserData, Goal as DataGoal } from '../../utils/dataManager';
 interface GoalsProps {
   onBack: () => void;
-}
-interface Goal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline: string;
-  emoji: string;
-  image: string;
-  isLocked: boolean;
-  isCompleted: boolean;
 }
 export const Goals: React.FC<GoalsProps> = ({
   onBack
 }) => {
   const [showCompletedMessage, setShowCompletedMessage] = useState<string | null>(null);
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
-  // Mock goals data
-  const [goals, setGoals] = useState<Goal[]>([{
-    id: '1',
-    name: 'Travel Fund',
-    targetAmount: 250000,
-    currentAmount: 250000,
-    deadline: '2023-12-15',
-    emoji: '✈️',
-    image: 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
-    isLocked: true,
-    isCompleted: true
-  }, {
-    id: '2',
-    name: 'Home Decor',
-    targetAmount: 150000,
-    currentAmount: 87500,
-    deadline: '2023-11-30',
-    emoji: '🛋',
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1632&q=80',
-    isLocked: false,
-    isCompleted: false
-  }, {
-    id: '3',
-    name: 'New Laptop',
-    targetAmount: 450000,
-    currentAmount: 125000,
-    deadline: '2024-03-01',
-    emoji: '💻',
-    image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1471&q=80',
-    isLocked: true,
-    isCompleted: false
-  }]);
-  // Toggle lock status
-  const toggleLock = (id: string) => {
-    setGoals(goals.map(goal => goal.id === id ? {
-      ...goal,
-      isLocked: !goal.isLocked
-    } : goal));
+  const [goals, setGoals] = useState<DataGoal[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newGoal, setNewGoal] = useState({
+    name: '',
+    targetAmount: '',
+    targetDate: '',
+    category: 'Other'
+  });
+
+  // Load goals from localStorage
+  useEffect(() => {
+    const userData = loadUserData();
+    setGoals(userData.goals);
+  }, []);
+
+  // Save goals to localStorage
+  const saveGoals = (updatedGoals: DataGoal[]) => {
+    const userData = loadUserData();
+    userData.goals = updatedGoals;
+    saveUserData(userData);
+    setGoals(updatedGoals);
+  };
+
+  // Create new goal
+  const createGoal = () => {
+    if (!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate) return;
+
+    const goalIcons = {
+      'Safety': { icon: 'shield', color: 'bg-gradient-to-br from-orange-400 to-red-500' },
+      'Travel': { icon: 'plane', color: 'bg-gradient-to-br from-blue-400 to-purple-500' },
+      'Technology': { icon: 'laptop', color: 'bg-gradient-to-br from-purple-400 to-pink-500' },
+      'Investment': { icon: 'trending', color: 'bg-gradient-to-br from-emerald-400 to-teal-500' },
+      'Other': { icon: 'target', color: 'bg-gradient-to-br from-amber-400 to-orange-500' }
+    };
+
+    const iconData = goalIcons[newGoal.category as keyof typeof goalIcons] || goalIcons.Other;
+
+    const goal: DataGoal = {
+      id: Date.now().toString(),
+      name: newGoal.name,
+      targetAmount: parseFloat(newGoal.targetAmount),
+      currentAmount: 0,
+      targetDate: newGoal.targetDate,
+      emoji: '', // Remove emoji
+      color: iconData.color,
+      category: newGoal.category
+    };
+
+    const updatedGoals = [...goals, goal];
+    saveGoals(updatedGoals);
+
+    // Reset form
+    setNewGoal({ name: '', targetAmount: '', targetDate: '', category: 'Other' });
+    setShowCreateModal(false);
+  };
+
+  // Get icon for goal category
+  const getGoalIcon = (category: string) => {
+    switch (category) {
+      case 'Safety':
+        return <ShieldIcon className="w-4 h-4" />;
+      case 'Travel':
+        return <PlaneIcon className="w-4 h-4" />;
+      case 'Technology':
+        return <LaptopIcon className="w-4 h-4" />;
+      case 'Investment':
+        return <TrendingUpIcon className="w-4 h-4" />;
+      default:
+        return <TargetIcon className="w-4 h-4" />;
+    }
   };
   // Format date
   const formatDate = (dateString: string) => {
@@ -76,26 +98,10 @@ export const Goals: React.FC<GoalsProps> = ({
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
+
   // Handle goal click
   const handleGoalClick = (id: string) => {
     setExpandedGoal(expandedGoal === id ? null : id);
-  };
-  // Simulate completing a goal
-  const completeGoal = (id: string) => {
-    const goalToComplete = goals.find(goal => goal.id === id);
-    if (goalToComplete) {
-      setShowCompletedMessage(goalToComplete.name);
-      // Update goal status
-      setGoals(goals.map(goal => goal.id === id ? {
-        ...goal,
-        currentAmount: goal.targetAmount,
-        isCompleted: true
-      } : goal));
-      // Hide message after delay
-      setTimeout(() => {
-        setShowCompletedMessage(null);
-      }, 5000);
-    }
   };
   return <div className="w-full min-h-screen py-6 pb-24 relative">
       <div className="max-w-md mx-auto px-4">
@@ -118,6 +124,7 @@ export const Goals: React.FC<GoalsProps> = ({
             className="w-12 h-12 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 shadow-large flex items-center justify-center border border-white/20"
             whileHover={{ scale: 1.05, boxShadow: '0 0 25px rgba(16, 185, 129, 0.4)' }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCreateModal(true)}
           >
             <PlusIcon className="w-5 h-5 text-white" />
           </motion.button>
@@ -148,49 +155,94 @@ export const Goals: React.FC<GoalsProps> = ({
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleGoalClick(goal.id)}
               >
-                {/* Goal Card */}
-                <div className="relative h-32">
-                  <img src={goal.image} alt={goal.name} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    <div className="flex items-center justify-between">
+                {/* Goal Card Header */}
+                <div className={`relative h-32 ${goal.color} overflow-hidden`}>
+                  {/* Glassmorphism Effects */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-white/5 backdrop-blur-sm"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+
+                  {/* Content */}
+                  <div className="relative h-full flex items-center justify-between p-6">
+                    <div className="flex items-center space-x-4">
+                      {/* Icon */}
+                      <div className="w-16 h-16 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center border border-white/40 shadow-lg">
+                        <div className="text-white drop-shadow-sm">
+                          {getGoalIcon(goal.category)}
+                        </div>
+                      </div>
+
+                      {/* Goal Info */}
                       <div>
-                        <h3 className="text-xl font-bold flex items-center">
-                          <span className="mr-2">{goal.emoji}</span>
+                        <h3 className="text-xl font-bold text-white">
                           {goal.name}
                         </h3>
                         <p className="text-sm text-white/90">
-                          {goal.isCompleted ? 'Completed!' : `${calculateDaysRemaining(goal.deadline)} days remaining`}
+                          {calculateDaysRemaining(goal.targetDate)} days remaining
+                        </p>
+                        <p className="text-xs text-white/70 mt-1">
+                          {goal.category}
                         </p>
                       </div>
-                      <button className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center" onClick={e => {
-                    e.stopPropagation();
-                    toggleLock(goal.id);
-                  }}>
-                        {goal.isLocked ? <LockIcon className="w-4 h-4 text-white" /> : <UnlockIcon className="w-4 h-4 text-white" />}
-                      </button>
+                    </div>
+
+                    {/* Progress Circle */}
+                    <div className="relative w-12 h-12">
+                      <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          className="text-white/20"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                          className="text-white"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeDasharray={`${(goal.currentAmount / goal.targetAmount) * 100}, 100`}
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs font-bold text-white">
+                          {Math.round((goal.currentAmount / goal.targetAmount) * 100)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-                {/* Progress Bar */}
-                <div className="p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="text-sm text-gray-600">
-                      {Math.round(goal.currentAmount / goal.targetAmount * 100)}
-                      % Complete
+                {/* Progress Details */}
+                <div className="p-6">
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Progress
                     </div>
-                    <div className="text-sm font-medium">
-                      ₦{goal.currentAmount.toLocaleString()} / ₦
-                      {goal.targetAmount.toLocaleString()}
+                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      ₦{goal.currentAmount.toLocaleString()} / ₦{goal.targetAmount.toLocaleString()}
                     </div>
                   </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+
+                  <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-4">
                     <motion.div
                       className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 shadow-glow"
                       initial={{ width: 0 }}
-                      animate={{ width: `${goal.currentAmount / goal.targetAmount * 100}%` }}
+                      animate={{ width: `${(goal.currentAmount / goal.targetAmount) * 100}%` }}
                       transition={{ duration: 1.5, ease: 'easeOut' }}
                     />
+                  </div>
+
+                  {/* Target Date */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center text-gray-500 dark:text-gray-400">
+                      <CalendarIcon className="w-4 h-4 mr-1" />
+                      Target: {formatDate(goal.targetDate)}
+                    </div>
+                    <div className="text-gray-600 dark:text-gray-300 font-medium">
+                      ₦{(goal.targetAmount - goal.currentAmount).toLocaleString()} to go
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -222,11 +274,11 @@ export const Goals: React.FC<GoalsProps> = ({
                         <div>
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Target Date</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatDate(goal.deadline)}
+                            {formatDate(goal.targetDate)}
                           </p>
                         </div>
                       </div>
-                      {goal.isCompleted && <div className="flex items-start">
+                      {goal.currentAmount >= goal.targetAmount && <div className="flex items-start">
                           <div className="w-8 h-8 rounded-full bg-accent-100 flex items-center justify-center mr-3 border border-accent-200">
                             <CheckCircleIcon className="w-4 h-4 text-accent-600" />
                           </div>
@@ -234,14 +286,23 @@ export const Goals: React.FC<GoalsProps> = ({
                             <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                               Goal Completed
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Today</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Congratulations!</p>
                           </div>
                         </div>}
                     </div>
                     {/* Action Button */}
-                    {!goal.isCompleted && <motion.button
+                    {goal.currentAmount < goal.targetAmount && <motion.button
                       className="w-full py-3 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold shadow-soft"
-                      onClick={() => completeGoal(goal.id)}
+                      onClick={() => {
+                        // For demo purposes, add 10% of target amount
+                        const addAmount = Math.min(goal.targetAmount * 0.1, goal.targetAmount - goal.currentAmount);
+                        const updatedGoals = goals.map(g =>
+                          g.id === goal.id
+                            ? { ...g, currentAmount: g.currentAmount + addAmount }
+                            : g
+                        );
+                        saveGoals(updatedGoals);
+                      }}
                       whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(16, 185, 129, 0.4)' }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -252,5 +313,93 @@ export const Goals: React.FC<GoalsProps> = ({
             </div>)}
         </div>
       </div>
+
+      {/* Create Goal Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowCreateModal(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Create New Goal</h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., Emergency Fund"
+                    value={newGoal.name}
+                    onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="100000"
+                    value={newGoal.targetAmount}
+                    onChange={(e) => setNewGoal({ ...newGoal, targetAmount: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Date</label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={newGoal.targetDate}
+                    onChange={(e) => setNewGoal({ ...newGoal, targetDate: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    value={newGoal.category}
+                    onChange={(e) => setNewGoal({ ...newGoal, category: e.target.value })}
+                  >
+                    <option value="Safety">Safety</option>
+                    <option value="Travel">Travel</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Investment">Investment</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  className="flex-1 py-2 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 py-2 px-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:shadow-lg"
+                  onClick={createGoal}
+                  disabled={!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate}
+                >
+                  Create Goal
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>;
 };

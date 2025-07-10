@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeftIcon, SparklesIcon, InfoIcon, CheckCircleIcon } from 'lucide-react';
+import { loadUserData, saveUserData } from '../../utils/dataManager';
 interface BudgetSetupProps {
   onBack: () => void;
 }
@@ -14,6 +15,14 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
   const [isBalanced, setIsBalanced] = useState(false);
   const [showSmartBalance, setShowSmartBalance] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showMiniBudgets, setShowMiniBudgets] = useState(false);
+  const [miniBudgets, setMiniBudgets] = useState([
+    { id: 1, name: 'Weekly Groceries', amount: 15000, category: 'Food', color: 'bg-green-500' },
+    { id: 2, name: 'Entertainment', amount: 8000, category: 'Fun', color: 'bg-purple-500' },
+    { id: 3, name: 'Gas & Transport', amount: 12000, category: 'Transport', color: 'bg-blue-500' }
+  ]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   // Calculate percentages
   const essentialPercent = Math.round(essentialSpend / income * 100) || 0;
   const savingsPercent = Math.round(savingsGoal / income * 100) || 0;
@@ -42,6 +51,47 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
     setEssentialSpend(smartEssential);
     setSavingsGoal(smartSavings);
     setFreeSpend(smartFree);
+  };
+
+  // Save budget plan
+  const saveBudgetPlan = async () => {
+    if (!isBalanced || isSaving) return;
+
+    setIsSaving(true);
+
+    try {
+      const userData = loadUserData();
+
+      // Create new budget
+      const newBudget = {
+        id: Date.now().toString(),
+        name: 'Monthly Budget',
+        totalBudget: income,
+        categories: {
+          'Essential': { budgeted: essentialSpend, spent: 0 },
+          'Savings': { budgeted: savingsGoal, spent: 0 },
+          'Free Spending': { budgeted: freeSpend, spent: 0 }
+        },
+        period: 'monthly' as const,
+        startDate: new Date().toISOString().split('T')[0]
+      };
+
+      // Update user data
+      userData.budgets = [newBudget, ...userData.budgets.filter(b => b.name !== 'Monthly Budget')];
+      userData.monthlyIncome = income;
+
+      saveUserData(userData);
+
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setIsSaving(false);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error saving budget:', error);
+      setIsSaving(false);
+    }
   };
   return <div className="w-full min-h-screen py-6 pb-24 relative">
       <div className="max-w-md mx-auto px-4">
@@ -136,7 +186,7 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
               ₦{income.toLocaleString()}
             </div>
           </div>
-          <input type="range" min="10000" max="500000" step="1000" value={income} onChange={e => setIncome(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+          <input type="range" min="10000" max="2000000" step="5000" value={income} onChange={e => setIncome(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
         </div>
         {/* Budget Category Cards */}
         <div className="space-y-4">
@@ -231,18 +281,114 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
           </div>
         </div>
         {/* Save Button */}
+        {/* Mini Budgets Section */}
+        <motion.div
+          className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-soft border border-white/20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800">Mini Budgets</h3>
+            <button
+              className="text-primary-600 text-sm font-medium hover:text-primary-700 transition-colors"
+              onClick={() => setShowMiniBudgets(!showMiniBudgets)}
+            >
+              {showMiniBudgets ? 'Hide' : 'Manage'}
+            </button>
+          </div>
+
+          <p className="text-gray-600 text-sm mb-4">
+            Create specific budgets for different spending categories to stay on track.
+          </p>
+
+          <AnimatePresence>
+            {showMiniBudgets && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-3"
+              >
+                {miniBudgets.map((budget, index) => (
+                  <motion.div
+                    key={budget.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${budget.color}`}></div>
+                      <div>
+                        <p className="font-medium text-gray-800 text-sm">{budget.name}</p>
+                        <p className="text-xs text-gray-500">{budget.category}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-800">₦{budget.amount.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">per month</p>
+                    </div>
+                  </motion.div>
+                ))}
+
+                <motion.button
+                  className="w-full py-3 border-2 border-dashed border-primary-300 rounded-xl text-primary-600 font-medium hover:bg-primary-50 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  + Add Mini Budget
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
         <motion.button
           className={`w-full py-4 rounded-2xl mt-8 font-semibold text-white shadow-large ${
-            isBalanced
+            isBalanced && !isSaving
               ? 'bg-gradient-to-r from-primary-500 to-primary-600 hover:shadow-glow'
               : 'bg-gray-400'
           }`}
           whileTap={{ scale: 0.98 }}
-          whileHover={isBalanced ? { scale: 1.02 } : {}}
-          disabled={!isBalanced}
+          whileHover={isBalanced && !isSaving ? { scale: 1.02 } : {}}
+          disabled={!isBalanced || isSaving}
+          onClick={saveBudgetPlan}
         >
-          Save Budget Plan ✨
+          {isSaving ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Saving Budget...
+            </div>
+          ) : saveSuccess ? (
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircleIcon className="w-5 h-5" />
+              Budget Saved!
+            </div>
+          ) : (
+            'Save Budget Plan'
+          )}
         </motion.button>
+
+        {/* Success Message */}
+        {saveSuccess && (
+          <motion.div
+            className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="flex items-center gap-2 text-green-700">
+              <CheckCircleIcon className="w-5 h-5" />
+              <span className="font-medium">Budget plan saved successfully!</span>
+            </div>
+            <p className="text-green-600 text-sm mt-1">
+              Your budget is now active and tracking your spending.
+            </p>
+          </motion.div>
+        )}
       </div>
     </div>;
 };
