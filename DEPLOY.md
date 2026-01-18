@@ -55,3 +55,35 @@ heroku container:release web -a <app-name>
 
 After deployment
 - POST JSON to `/v1/tax/calc` with payload `{ "country": "NG", "grossAnnual": 1200000 }` to get the mocked tax response.
+
+Vercel (recommended for full API)
+
+1. Connect your GitHub repository to Vercel: https://vercel.com/new
+2. Select the project (Budget-Friendly-app) and confirm settings; Vercel will detect the `api/` serverless functions automatically.
+3. Add environment variables in the Vercel dashboard (Project Settings → Environment Variables):
+	- `MONGODB_URI` (Secret)
+	- `MONGODB_DB` (optional)
+	- `JWT_ACCESS_SECRET` (Secret)
+	- `JWT_REFRESH_SECRET` (Secret)
+	- `JWT_ACCESS_TTL_MIN` (e.g., `15`)
+	- `JWT_REFRESH_TTL_DAYS` (e.g., `30`)
+	- `NODE_ENV` = `production`
+	- `EXPO_PUBLIC_API_BASE_URL` = `https://<your-vercel-url>`
+4. Optionally add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as GitHub repository secrets so the GitHub Action `/.github/workflows/vercel-deploy.yml` can deploy automatically on pushes to `main`.
+	- Create a Personal Token in Vercel (Account → Tokens) and copy the token to `VERCEL_TOKEN` in GitHub Secrets.
+	- Get `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` from the Vercel project settings and add them to GitHub Secrets.
+5. Push to `main` (or merge a PR) — the GitHub Action will run and deploy the project to Vercel.
+
+Quick manual deploy (Vercel CLI)
+```bash
+npm i -g vercel
+vercel login
+vercel --prod
+```
+
+After Vercel deploy
+- Test auth and tax endpoints:
+  - `POST https://<your-vercel-url>/v1/auth/register`
+  - `POST https://<your-vercel-url>/v1/auth/login`
+  - `POST https://<your-vercel-url>/v1/tax/calc`
+
