@@ -70,23 +70,6 @@ export const InfoTile: React.FC<InfoTileProps> = ({
     }
   };
 
-  const getGradientBg = () => {
-    switch (color) {
-      case 'blue':
-        return 'bg-gradient-to-br from-primary-500 to-primary-600';
-      case 'green':
-        return 'bg-gradient-to-br from-success-500 to-success-600';
-      case 'purple':
-        return 'bg-gradient-to-br from-secondary-500 to-secondary-600';
-      case 'orange':
-        return 'bg-gradient-to-br from-warning-500 to-warning-600';
-      case 'emerald':
-        return 'bg-gradient-to-br from-emerald-500 to-emerald-600';
-      default:
-        return 'bg-gradient-to-br from-primary-500 to-primary-600';
-    }
-  };
-
   return (
     <motion.div
       className={`relative p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-white/20 hover:shadow-medium transition-all duration-300 ${className}`}

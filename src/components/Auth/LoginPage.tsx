@@ -2,37 +2,39 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, Shield, Zap } from 'lucide-react';
 import { Logo } from '../Common/Logo';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginPageProps {
   onLogin: () => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+  const auth = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Demo credentials
-  const DEMO_EMAIL = 'demo@budgetfriendly.com';
-  const DEMO_PASSWORD = 'BudgetFriendly2025!';
+  const [mode, setMode] = useState<'login' | 'register'>('login');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+    try {
+      if (mode === 'register') {
+        await auth.register(email, password, name.trim() ? name.trim() : undefined);
+      } else {
+        await auth.login(email, password);
+      }
       onLogin();
-    } else {
-      setError('Invalid credentials. Please try the demo account.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const features = [
@@ -109,10 +111,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </motion.div>
             
             <h1 className="text-3xl font-bold font-display bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent mb-2">
-              Welcome Back
+              {mode === 'login' ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 font-medium">
-              Sign in to your BudgetFriendly account
+              {mode === 'login' ? 'Sign in to your BudgetFriendly account' : 'Start budgeting smarter today'}
             </p>
           </motion.div>
 
@@ -124,9 +126,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <form onSubmit={handleLogin} className="space-y-6">
+              {mode === 'register' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                    Name (optional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-4 py-4 bg-gray-50/50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700/50 text-gray-900 dark:text-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Email Field */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
@@ -135,7 +154,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
+                    className="w-full pl-12 pr-4 py-4 bg-gray-50/50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700/50 text-gray-900 dark:text-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
                     placeholder="Enter your email"
                     required
                   />
@@ -144,7 +163,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
               {/* Password Field */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -153,7 +172,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-12 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
+                    className="w-full pl-12 pr-12 py-4 bg-gray-50/50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700/50 text-gray-900 dark:text-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
                     placeholder="Enter your password"
                     required
                   />
@@ -197,12 +216,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   />
                 ) : (
                   <>
-                    <span>Sign In</span>
+                    <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
               </motion.button>
             </form>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setMode(mode === 'login' ? 'register' : 'login');
+                }}
+                className="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                {mode === 'login' ? "Don't have an account? Create one" : 'Already have an account? Sign in'}
+              </button>
+            </div>
 
 
           </motion.div>

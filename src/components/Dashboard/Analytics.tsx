@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowLeftIcon, TrendingUpIcon, TrendingDownIcon, AlertTriangleIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { getAnalyticsSummary, listTransactions } from '../../utils/api/endpoints';
 interface AnalyticsProps {
   onBack: () => void;
 }
@@ -18,285 +19,195 @@ interface TimelineData {
   bills: number;
   misc: number;
 }
+
+function timeframeRange(timeframe: 'daily' | 'weekly' | 'monthly') {
+  const now = new Date();
+  if (timeframe === 'daily') {
+    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return { start, end: now };
+  }
+  if (timeframe === 'weekly') {
+    const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return { start, end: now };
+  }
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { start, end: now };
+}
+
+function bucketCategory(category: string): keyof Omit<TimelineData, 'name'> {
+  const c = category.trim().toLowerCase();
+  if (c.includes('food') || c.includes('grocer') || c.includes('dining')) return 'food';
+  if (c.includes('transport') || c.includes('car') || c.includes('gas') || c.includes('taxi') || c.includes('uber')) return 'transport';
+  if (c.includes('shop')) return 'shopping';
+  if (c.includes('bill') || c.includes('util') || c.includes('rent') || c.includes('electric') || c.includes('internet')) return 'bills';
+  return 'misc';
+}
+
+async function fetchAllTransactions(startIso: string, endIso: string, maxPages = 5) {
+  const items: Array<{ type: 'income' | 'expense'; amount: number; category: string; occurredAt: string }> = [];
+  let cursor: string | undefined;
+
+  for (let i = 0; i < maxPages; i++) {
+    const page = await listTransactions({ start: startIso, end: endIso, limit: 200, cursor });
+    for (const t of page.items) {
+      items.push({ type: t.type, amount: t.amount, category: t.category, occurredAt: t.occurredAt });
+    }
+    if (!page.nextCursor) break;
+    cursor = page.nextCursor;
+  }
+
+  return items;
+}
 export const Analytics: React.FC<AnalyticsProps> = ({
   onBack
 }) => {
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  // Mock data for pie chart with theme colors - changes based on timeframe
-  const getCategoryData = (): CategoryData[] => {
-    switch (timeframe) {
-      case 'daily':
-        return [{
-          name: 'Food',
-          value: 4000,
-          color: '#10b981' // primary-500
-        }, {
-          name: 'Transport',
-          value: 1500,
-          color: '#f97316' // secondary-500
-        }, {
-          name: 'Shopping',
-          value: 4700,
-          color: '#f59e0b' // accent-500
-        }, {
-          name: 'Bills',
-          value: 7000,
-          color: '#059669' // success-600
-        }, {
-          name: 'Misc',
-          value: 850,
-          color: '#dc2626' // error-600
-        }];
-      case 'monthly':
-        return [{
-          name: 'Food',
-          value: 120000,
-          color: '#10b981' // primary-500
-        }, {
-          name: 'Transport',
-          value: 58000,
-          color: '#f97316' // secondary-500
-        }, {
-          name: 'Shopping',
-          value: 100000,
-          color: '#f59e0b' // accent-500
-        }, {
-          name: 'Bills',
-          value: 75000,
-          color: '#059669' // success-600
-        }, {
-          name: 'Misc',
-          value: 41500,
-          color: '#dc2626' // error-600
-        }];
-      default: // weekly
-        return [{
-          name: 'Food',
-          value: 25000,
-          color: '#10b981' // primary-500
-        }, {
-          name: 'Transport',
-          value: 15000,
-          color: '#f97316' // secondary-500
-        }, {
-          name: 'Shopping',
-          value: 20000,
-          color: '#f59e0b' // accent-500
-        }, {
-          name: 'Bills',
-          value: 30000,
-          color: '#059669' // success-600
-        }, {
-          name: 'Misc',
-          value: 10000,
-          color: '#dc2626' // error-600
-        }];
-    }
-  };
+  const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
+  const [currentData, setCurrentData] = useState<TimelineData[]>([]);
+  const [totalSpending, setTotalSpending] = useState(0);
+  const [insights, setInsights] = useState<
+    Array<{ title: string; description: string; icon: React.ReactNode; color: string }>
+  >([]);
 
-  const categoryData = getCategoryData();
-  // Mock data for different timeframes
-  const dailyData: TimelineData[] = [{
-    name: '6h ago',
-    food: 500,
-    transport: 300,
-    shopping: 200,
-    bills: 0,
-    misc: 100
-  }, {
-    name: '12h ago',
-    food: 800,
-    transport: 0,
-    shopping: 1500,
-    bills: 0,
-    misc: 200
-  }, {
-    name: '18h ago',
-    food: 1200,
-    transport: 400,
-    shopping: 0,
-    bills: 2000,
-    misc: 150
-  }, {
-    name: 'Yesterday',
-    food: 2500,
-    transport: 800,
-    shopping: 3000,
-    bills: 5000,
-    misc: 400
-  }];
+  useEffect(() => {
+    setSelectedCategory(null);
 
-  const weeklyData: TimelineData[] = [{
-    name: 'Mon',
-    food: 3000,
-    transport: 1500,
-    shopping: 0,
-    bills: 0,
-    misc: 500
-  }, {
-    name: 'Tue',
-    food: 2000,
-    transport: 1500,
-    shopping: 5000,
-    bills: 0,
-    misc: 0
-  }, {
-    name: 'Wed',
-    food: 3500,
-    transport: 1500,
-    shopping: 0,
-    bills: 15000,
-    misc: 0
-  }, {
-    name: 'Thu',
-    food: 2500,
-    transport: 3000,
-    shopping: 0,
-    bills: 0,
-    misc: 1000
-  }, {
-    name: 'Fri',
-    food: 4000,
-    transport: 1500,
-    shopping: 8000,
-    bills: 0,
-    misc: 2000
-  }, {
-    name: 'Sat',
-    food: 6000,
-    transport: 1500,
-    shopping: 7000,
-    bills: 0,
-    misc: 3500
-  }, {
-    name: 'Sun',
-    food: 4000,
-    transport: 4500,
-    shopping: 0,
-    bills: 15000,
-    misc: 3000
-  }];
+    (async () => {
+      const { start, end } = timeframeRange(timeframe);
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
 
-  const monthlyData: TimelineData[] = [{
-    name: 'Week 1',
-    food: 28500,
-    transport: 12400,
-    shopping: 22800,
-    bills: 19500,
-    misc: 9000
-  }, {
-    name: 'Week 2',
-    food: 31200,
-    transport: 15600,
-    shopping: 18900,
-    bills: 25000,
-    misc: 11200
-  }, {
-    name: 'Week 3',
-    food: 26800,
-    transport: 13800,
-    shopping: 31500,
-    bills: 8500,
-    misc: 8900
-  }, {
-    name: 'Week 4',
-    food: 33500,
-    transport: 16200,
-    shopping: 26800,
-    bills: 22000,
-    misc: 12400
-  }];
+      const summary = await getAnalyticsSummary(startIso, endIso);
+      setTotalSpending(summary.expenses);
 
-  // Get current data based on timeframe
-  const getCurrentData = () => {
-    switch (timeframe) {
-      case 'daily':
-        return dailyData;
-      case 'monthly':
-        return monthlyData;
-      default:
-        return weeklyData;
-    }
-  };
+      const totals: Record<keyof Omit<TimelineData, 'name'>, number> = {
+        food: 0,
+        transport: 0,
+        shopping: 0,
+        bills: 0,
+        misc: 0
+      };
+      for (const [cat, value] of Object.entries(summary.spendingByCategory || {})) {
+        totals[bucketCategory(cat)] += value;
+      }
 
-  const currentData = getCurrentData();
+      setCategoryData([
+        { name: 'Food', value: totals.food, color: '#10b981' },
+        { name: 'Transport', value: totals.transport, color: '#f97316' },
+        { name: 'Shopping', value: totals.shopping, color: '#f59e0b' },
+        { name: 'Bills', value: totals.bills, color: '#059669' },
+        { name: 'Misc', value: totals.misc, color: '#dc2626' }
+      ]);
 
-  // Calculate total spending based on current timeframe
-  const getTotalSpending = () => {
-    switch (timeframe) {
-      case 'daily':
-        return 15800; // Last 24 hours
-      case 'monthly':
-        return 445600; // This month
-      default:
-        return categoryData.reduce((sum, category) => sum + category.value, 0); // This week
-    }
-  };
+      const tx = await fetchAllTransactions(startIso, endIso);
+      const expenses = tx.filter((t) => t.type === 'expense');
 
-  const totalSpending = getTotalSpending();
-  // Insights data - changes based on timeframe
-  const getInsights = () => {
-    switch (timeframe) {
-      case 'daily':
-        return [{
-          type: 'warning',
-          title: 'High Shopping Today',
-          description: 'You spent ₦4,700 on shopping today - 30% above daily average.',
-          icon: <TrendingUpIcon className="w-5 h-5 text-secondary-600" />,
-          color: 'bg-secondary-50 border-secondary-200 text-secondary-800'
-        }, {
-          type: 'positive',
-          title: 'Transport Savings',
-          description: 'You saved ₦500 on transport compared to yesterday.',
-          icon: <TrendingDownIcon className="w-5 h-5 text-primary-600" />,
-          color: 'bg-primary-50 border-primary-200 text-primary-800'
-        }];
-      case 'monthly':
-        return [{
-          type: 'positive',
-          title: 'Monthly Budget On Track',
-          description: 'You\'re 15% under budget this month with 5 days remaining.',
-          icon: <TrendingDownIcon className="w-5 h-5 text-primary-600" />,
-          color: 'bg-primary-50 border-primary-200 text-primary-800'
-        }, {
-          type: 'warning',
-          title: 'Food Spending High',
-          description: 'Food expenses are 20% higher than last month.',
-          icon: <TrendingUpIcon className="w-5 h-5 text-secondary-600" />,
-          color: 'bg-secondary-50 border-secondary-200 text-secondary-800'
-        }, {
-          type: 'negative',
-          title: 'Shopping Budget Exceeded',
-          description: 'Shopping spending exceeded monthly budget by ₦25,000.',
+      if (timeframe === 'daily') {
+        const bins: TimelineData[] = [
+          { name: '6h ago', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 },
+          { name: '12h ago', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 },
+          { name: '18h ago', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 },
+          { name: 'Yesterday', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 }
+        ];
+
+        const now = end.getTime();
+        for (const t of expenses) {
+          const when = new Date(t.occurredAt).getTime();
+          const diffHours = Math.max(0, Math.floor((now - when) / (60 * 60 * 1000)));
+          const idx = Math.min(3, Math.floor(diffHours / 6));
+          const key = bucketCategory(t.category);
+          bins[idx][key] += t.amount;
+        }
+        setCurrentData(bins);
+      } else if (timeframe === 'weekly') {
+        const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayMap = new Map<string, TimelineData>();
+
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(end);
+          d.setDate(d.getDate() - i);
+          const key = d.toISOString().split('T')[0];
+          dayMap.set(key, { name: labels[d.getDay()], food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 });
+        }
+
+        for (const t of expenses) {
+          const d = new Date(t.occurredAt);
+          const k = d.toISOString().split('T')[0];
+          const row = dayMap.get(k);
+          if (!row) continue;
+          row[bucketCategory(t.category)] += t.amount;
+        }
+
+        setCurrentData(Array.from(dayMap.values()));
+      } else {
+        const bins: TimelineData[] = [
+          { name: 'Week 1', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 },
+          { name: 'Week 2', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 },
+          { name: 'Week 3', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 },
+          { name: 'Week 4', food: 0, transport: 0, shopping: 0, bills: 0, misc: 0 }
+        ];
+
+        for (const t of expenses) {
+          const d = new Date(t.occurredAt);
+          const dayOfMonth = d.getDate();
+          const week = Math.min(3, Math.floor((dayOfMonth - 1) / 7));
+          bins[week][bucketCategory(t.category)] += t.amount;
+        }
+        setCurrentData(bins);
+      }
+
+      const sortedCats = Object.entries(totals)
+        .sort((a, b) => b[1] - a[1])
+        .filter(([, v]) => v > 0);
+
+      const top = sortedCats[0];
+      const topName = top ? top[0] : 'misc';
+      const topAmount = top ? top[1] : 0;
+      const pretty = topName === 'food' ? 'Food' : topName === 'transport' ? 'Transport' : topName === 'shopping' ? 'Shopping' : topName === 'bills' ? 'Bills' : 'Misc';
+
+      const nextInsights: Array<{ title: string; description: string; icon: React.ReactNode; color: string }> = [];
+      nextInsights.push({
+        title: `Top Category: ${pretty}`,
+        description: `You spent ₦${topAmount.toLocaleString()} on ${pretty.toLowerCase()} in this timeframe.`,
+        icon: <TrendingUpIcon className="w-5 h-5 text-secondary-600" />,
+        color: 'bg-secondary-50 border-secondary-200 text-secondary-800'
+      });
+
+      nextInsights.push({
+        title: summary.remainingBudget >= 0 ? 'Budget Remaining' : 'Over Budget',
+        description:
+          summary.remainingBudget >= 0
+            ? `You have ₦${summary.remainingBudget.toLocaleString()} remaining based on your monthly income.`
+            : `You are ₦${Math.abs(summary.remainingBudget).toLocaleString()} over based on your monthly income.`,
+        icon: <TrendingDownIcon className="w-5 h-5 text-primary-600" />,
+        color: 'bg-primary-50 border-primary-200 text-primary-800'
+      });
+
+      if (summary.remainingBudget < 0) {
+        nextInsights.push({
+          title: 'Overspend Alert',
+          description: 'Consider reviewing your biggest expense category this period.',
           icon: <AlertTriangleIcon className="w-5 h-5 text-error-600" />,
           color: 'bg-error-50 border-error-200 text-error-800'
-        }];
-      default: // weekly
-        return [{
-          type: 'warning',
-          title: 'Spending Spike',
-          description: 'Your dining spend increased by 15% this week.',
-          icon: <TrendingUpIcon className="w-5 h-5 text-secondary-600" />,
-          color: 'bg-secondary-50 border-secondary-200 text-secondary-800'
-        }, {
-          type: 'positive',
-          title: 'Consistent Saver',
-          description: "You've maintained savings rate above 20% for 3 weeks",
-          icon: <TrendingUpIcon className="w-5 h-5 text-primary-600" />,
-          color: 'bg-primary-50 border-primary-200 text-primary-800'
-        }, {
-          type: 'negative',
-          title: 'Overspent on Transport',
-          description: 'Transport spending is 30% higher than your monthly average.',
-          icon: <AlertTriangleIcon className="w-5 h-5 text-error-600" />,
-          color: 'bg-error-50 border-error-200 text-error-800'
-        }];
-    }
-  };
+        });
+      }
 
-  const insights = getInsights();
+      setInsights(nextInsights);
+    })().catch((err) => {
+      console.error('Failed to load analytics:', err);
+      setCategoryData([]);
+      setCurrentData([]);
+      setTotalSpending(0);
+      setInsights([]);
+    });
+  }, [timeframe]);
+
+  const effectiveSelectedCategory = useMemo(() => {
+    if (!selectedCategory) return null;
+    return selectedCategory.toLowerCase();
+  }, [selectedCategory]);
   // Animation for pie chart slices
   const onPieEnter = (_: any, index: number) => {
     setActiveIndex(index);
@@ -406,7 +317,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({
               <XAxis dataKey="name" axisLine={false} tickLine={false} />
               <YAxis hide={true} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey={selectedCategory?.toLowerCase() || 'food'} stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} animationDuration={1000} hide={selectedCategory !== null && selectedCategory !== 'Food'} />
+              <Bar dataKey={effectiveSelectedCategory || 'food'} stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} animationDuration={1000} hide={selectedCategory !== null && selectedCategory !== 'Food'} />
               <Bar dataKey="transport" stackId="a" fill="#f97316" radius={[4, 4, 0, 0]} animationDuration={1000} hide={selectedCategory !== null && selectedCategory !== 'Transport'} />
               <Bar dataKey="shopping" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} animationDuration={1000} hide={selectedCategory !== null && selectedCategory !== 'Shopping'} />
               <Bar dataKey="bills" stackId="a" fill="#059669" radius={[4, 4, 0, 0]} animationDuration={1000} hide={selectedCategory !== null && selectedCategory !== 'Bills'} />

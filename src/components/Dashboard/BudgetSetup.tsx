@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeftIcon, SparklesIcon, InfoIcon, CheckCircleIcon } from 'lucide-react';
-import { loadUserData, saveUserData } from '../../utils/dataManager';
+import { ArrowLeftIcon, SparklesIcon, CheckCircleIcon } from 'lucide-react';
+import { createBudget, getMe, listBudgets, patchMe } from '../../utils/api/endpoints';
 interface BudgetSetupProps {
   onBack: () => void;
 }
@@ -16,13 +16,37 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
   const [showSmartBalance, setShowSmartBalance] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showMiniBudgets, setShowMiniBudgets] = useState(false);
-  const [miniBudgets, setMiniBudgets] = useState([
+  const miniBudgets = [
     { id: 1, name: 'Weekly Groceries', amount: 15000, category: 'Food', color: 'bg-green-500' },
     { id: 2, name: 'Entertainment', amount: 8000, category: 'Fun', color: 'bg-purple-500' },
     { id: 3, name: 'Gas & Transport', amount: 12000, category: 'Transport', color: 'bg-blue-500' }
-  ]);
+  ];
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const me = await getMe();
+      if (typeof me.monthlyIncome === 'number' && me.monthlyIncome > 0) {
+        setIncome(me.monthlyIncome);
+      }
+
+      const budgets = await listBudgets();
+      const latest = budgets.items?.[0];
+      if (!latest) return;
+
+      setIncome(latest.totalBudget);
+      const essential = latest.categories?.Essential?.budgeted;
+      const savings = latest.categories?.Savings?.budgeted;
+      const free = latest.categories?.['Free Spending']?.budgeted;
+
+      if (typeof essential === 'number') setEssentialSpend(essential);
+      if (typeof savings === 'number') setSavingsGoal(savings);
+      if (typeof free === 'number') setFreeSpend(free);
+    })().catch((err) => {
+      console.error('Failed to load budget:', err);
+    });
+  }, []);
   // Calculate percentages
   const essentialPercent = Math.round(essentialSpend / income * 100) || 0;
   const savingsPercent = Math.round(savingsGoal / income * 100) || 0;
@@ -60,27 +84,19 @@ export const BudgetSetup: React.FC<BudgetSetupProps> = ({
     setIsSaving(true);
 
     try {
-      const userData = loadUserData();
-
-      // Create new budget
-      const newBudget = {
-        id: Date.now().toString(),
+      await createBudget({
         name: 'Monthly Budget',
         totalBudget: income,
+        period: 'monthly',
+        startDate: new Date().toISOString().split('T')[0],
         categories: {
-          'Essential': { budgeted: essentialSpend, spent: 0 },
-          'Savings': { budgeted: savingsGoal, spent: 0 },
-          'Free Spending': { budgeted: freeSpend, spent: 0 }
-        },
-        period: 'monthly' as const,
-        startDate: new Date().toISOString().split('T')[0]
-      };
+          Essential: { budgeted: essentialSpend },
+          Savings: { budgeted: savingsGoal },
+          'Free Spending': { budgeted: freeSpend }
+        }
+      });
 
-      // Update user data
-      userData.budgets = [newBudget, ...userData.budgets.filter(b => b.name !== 'Monthly Budget')];
-      userData.monthlyIncome = income;
-
-      saveUserData(userData);
+      await patchMe({ monthlyIncome: income });
 
       setSaveSuccess(true);
       setTimeout(() => {

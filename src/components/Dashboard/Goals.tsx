@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeftIcon, PlusIcon, CheckCircleIcon, LockIcon, UnlockIcon, TrendingUpIcon, CalendarIcon, TargetIcon, ShieldIcon, PlaneIcon, LaptopIcon } from 'lucide-react';
-import { loadUserData, saveUserData, Goal as DataGoal } from '../../utils/dataManager';
+import { ArrowLeftIcon, PlusIcon, CheckCircleIcon, TrendingUpIcon, CalendarIcon, TargetIcon, ShieldIcon, PlaneIcon, LaptopIcon } from 'lucide-react';
+import { createGoal as apiCreateGoal, listGoals, patchGoal } from '../../utils/api/endpoints';
+import type { Goal as DataGoal } from '../../utils/dataManager';
 interface GoalsProps {
   onBack: () => void;
 }
@@ -19,22 +20,31 @@ export const Goals: React.FC<GoalsProps> = ({
     category: 'Other'
   });
 
-  // Load goals from localStorage
+  // Load goals from backend
   useEffect(() => {
-    const userData = loadUserData();
-    setGoals(userData.goals);
+    listGoals()
+      .then((items) => {
+        setGoals(
+          items.map((g) => ({
+            id: g.id,
+            name: g.name,
+            targetAmount: g.targetAmount,
+            currentAmount: g.currentAmount,
+            targetDate: g.targetDate,
+            emoji: g.emoji ?? '',
+            color: g.color ?? 'bg-gradient-to-br from-amber-400 to-orange-500',
+            category: g.category ?? 'Other'
+          }))
+        );
+      })
+      .catch((err) => {
+        console.error('Failed to load goals:', err);
+        setGoals([]);
+      });
   }, []);
 
-  // Save goals to localStorage
-  const saveGoals = (updatedGoals: DataGoal[]) => {
-    const userData = loadUserData();
-    userData.goals = updatedGoals;
-    saveUserData(userData);
-    setGoals(updatedGoals);
-  };
-
   // Create new goal
-  const createGoal = () => {
+  const createGoal = async () => {
     if (!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate) return;
 
     const goalIcons = {
@@ -47,23 +57,35 @@ export const Goals: React.FC<GoalsProps> = ({
 
     const iconData = goalIcons[newGoal.category as keyof typeof goalIcons] || goalIcons.Other;
 
-    const goal: DataGoal = {
-      id: Date.now().toString(),
-      name: newGoal.name,
-      targetAmount: parseFloat(newGoal.targetAmount),
-      currentAmount: 0,
-      targetDate: newGoal.targetDate,
-      emoji: '', // Remove emoji
-      color: iconData.color,
-      category: newGoal.category
-    };
+    try {
+      const created = await apiCreateGoal({
+        name: newGoal.name,
+        targetAmount: parseFloat(newGoal.targetAmount),
+        targetDate: newGoal.targetDate,
+        currentAmount: 0,
+        color: iconData.color,
+        category: newGoal.category
+      });
 
-    const updatedGoals = [...goals, goal];
-    saveGoals(updatedGoals);
+      const goal: DataGoal = {
+        id: created.id,
+        name: created.name,
+        targetAmount: created.targetAmount,
+        currentAmount: created.currentAmount,
+        targetDate: created.targetDate,
+        emoji: created.emoji ?? '',
+        color: created.color ?? iconData.color,
+        category: created.category ?? newGoal.category
+      };
 
-    // Reset form
-    setNewGoal({ name: '', targetAmount: '', targetDate: '', category: 'Other' });
-    setShowCreateModal(false);
+      setGoals((prev) => [goal, ...prev]);
+
+      // Reset form
+      setNewGoal({ name: '', targetAmount: '', targetDate: '', category: 'Other' });
+      setShowCreateModal(false);
+    } catch (err) {
+      console.error('Failed to create goal:', err);
+    }
   };
 
   // Get icon for goal category
@@ -293,15 +315,23 @@ export const Goals: React.FC<GoalsProps> = ({
                     {/* Action Button */}
                     {goal.currentAmount < goal.targetAmount && <motion.button
                       className="w-full py-3 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold shadow-soft"
-                      onClick={() => {
+                      onClick={async () => {
                         // For demo purposes, add 10% of target amount
                         const addAmount = Math.min(goal.targetAmount * 0.1, goal.targetAmount - goal.currentAmount);
-                        const updatedGoals = goals.map(g =>
-                          g.id === goal.id
-                            ? { ...g, currentAmount: g.currentAmount + addAmount }
-                            : g
-                        );
-                        saveGoals(updatedGoals);
+                        const nextAmount = goal.currentAmount + addAmount;
+                        try {
+                          const updated = await patchGoal(goal.id, { currentAmount: nextAmount });
+                          setGoals((prev) =>
+                            prev.map((g) => (g.id === goal.id ? { ...g, currentAmount: updated.currentAmount } : g))
+                          );
+
+                          if (updated.currentAmount >= goal.targetAmount) {
+                            setShowCompletedMessage(goal.id);
+                            setTimeout(() => setShowCompletedMessage(null), 2500);
+                          }
+                        } catch (err) {
+                          console.error('Failed to update goal:', err);
+                        }
                       }}
                       whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(16, 185, 129, 0.4)' }}
                       whileTap={{ scale: 0.98 }}

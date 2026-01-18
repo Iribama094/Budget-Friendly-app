@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeftIcon, BellIcon, ClockIcon, TagIcon, MoonIcon, FileTextIcon, MailIcon, AlertTriangleIcon, ChevronRightIcon, LogOutIcon, HelpCircleIcon } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getTokens } from '../../utils/api/storage';
+import { getAnalyticsSummary, logout as apiLogout } from '../../utils/api/endpoints';
 interface ProfileSettingsProps {
   onBack: () => void;
 }
@@ -9,6 +12,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   onBack
 }) => {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const auth = useAuth();
 
   // Settings state
   const [notifications, setNotifications] = useState(true);
@@ -16,13 +20,33 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [autoCategories, setAutoCategories] = useState(true);
   const [weeklySummaries, setWeeklySummaries] = useState(true);
   const [overspendAlerts, setOverspendAlerts] = useState(true);
-  // Mock user data
-  const user = {
-    name: 'Daniella Alfred',
-    email: 'Daniella@example.com',
-    netWorth: 12250000,
-    currency: '₦'
-  };
+  const [netWorth, setNetWorth] = useState(0);
+
+  const displayName = useMemo(() => {
+    if (auth.user?.name?.trim()) return auth.user.name.trim();
+    if (auth.user?.email?.trim()) return auth.user.email.trim();
+    return 'User';
+  }, [auth.user?.email, auth.user?.name]);
+
+  const initials = useMemo(() => {
+    const parts = displayName.split(' ').filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return displayName.slice(0, 1).toUpperCase();
+  }, [displayName]);
+
+  const currency = auth.user?.currency || '₦';
+
+  useEffect(() => {
+    (async () => {
+      const start = '1970-01-01';
+      const end = new Date().toISOString().split('T')[0];
+      const summary = await getAnalyticsSummary(start, end);
+      setNetWorth(summary.totalBalance);
+    })().catch((err) => {
+      console.error('Failed to load net worth:', err);
+      setNetWorth(0);
+    });
+  }, []);
   // Toggle function
   const handleToggle = (setting: string, value: boolean) => {
     switch (setting) {
@@ -71,19 +95,19 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         >
           <div className="flex items-center">
             <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mr-4 shadow-glow">
-              {user.name.split(' ').map(n => n[0]).join('')}
+              {initials}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">{user.name}</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">{user.email}</p>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">{displayName}</h2>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">{auth.user?.email || ''}</p>
             </div>
           </div>
           <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
             <div className="flex justify-between items-center">
               <p className="text-gray-600 dark:text-gray-400">Net Worth</p>
               <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                {user.currency}
-                {user.netWorth.toLocaleString()}
+                {currency}
+                {netWorth.toLocaleString()}
               </p>
             </div>
           </div>
@@ -242,7 +266,18 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             </div>
             <span className="text-gray-800 dark:text-gray-200">Help & Support</span>
           </button>
-          <button className="w-full flex items-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-white/20 dark:border-gray-700/20">
+          <button
+            className="w-full flex items-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-white/20 dark:border-gray-700/20"
+            onClick={() => {
+              const tokens = getTokens();
+              if (tokens?.refreshToken) {
+                apiLogout(tokens.refreshToken).catch(() => {
+                  // ignore; fall back to local logout
+                });
+              }
+              auth.logout();
+            }}
+          >
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
               <LogOutIcon className="w-5 h-5 text-red-600" />
             </div>

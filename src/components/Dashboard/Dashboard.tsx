@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, useAnimation, useMotionValue } from 'framer-motion';
-import { PlusIcon, MicIcon, ChevronDownIcon, MessageSquareIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { PlusIcon } from 'lucide-react';
 import { BudgetRing } from './BudgetRing';
 import { InfoTile } from './InfoTile';
 import { QuoteDisplay } from './QuoteDisplay';
@@ -11,17 +11,31 @@ import { Goals } from './Goals';
 import { ProfileSettings } from './ProfileSettings';
 import { BottomNavigation } from '../Navigation/BottomNavigation';
 import { TransactionHistory } from './TransactionHistory';
-import { loadUserData, getFinancialSummary, getCurrentMonthTransactions } from '../../utils/dataManager';
+import { getAnalyticsSummary, listGoals, listTransactions } from '../../utils/api/endpoints';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 
 export const Dashboard = () => {
+  const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'dashboard' | 'budget' | 'analytics' | 'goals' | 'profile' | 'transactions'>('dashboard');
-  const [financialData, setFinancialData] = useState(getFinancialSummary());
-  const [recentTransactions, setRecentTransactions] = useState(getCurrentMonthTransactions().slice(0, 3));
-  const [userGoals, setUserGoals] = useState(loadUserData().goals.slice(0, 4));
+  const [financialData, setFinancialData] = useState({
+    totalBalance: 0,
+    monthlyIncome: 0,
+    monthlyExpenses: 0,
+    monthlyBudget: 0,
+    todaySpending: 0,
+    weeklySpending: 0,
+    remainingBudget: 0,
+    spendingByCategory: {} as Record<string, number>
+  });
+  const [recentTransactions, setRecentTransactions] = useState<
+    Array<{ id: string; type: 'income' | 'expense'; amount: number; category: string; description: string; date: string }>
+  >([]);
+  const [userGoals, setUserGoals] = useState<
+    Array<{ id: string; name: string; targetAmount: number; currentAmount: number; targetDate: string; emoji: string; color: string; category: string }>
+  >([]);
 
   // Get time-aware greeting
   const getTimeBasedGreeting = () => {
@@ -32,15 +46,77 @@ export const Dashboard = () => {
   };
 
   // Refresh data when component mounts or modal closes
-  const refreshData = () => {
-    setFinancialData(getFinancialSummary());
-    setRecentTransactions(getCurrentMonthTransactions().slice(0, 3));
-    setUserGoals(loadUserData().goals.slice(0, 4));
+  const refreshData = async () => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const startIso = startOfMonth.toISOString();
+    const endIso = now.toISOString();
+
+    const [summary, tx, goals] = await Promise.all([
+      getAnalyticsSummary(startIso, endIso),
+      listTransactions({ start: startIso, end: endIso, limit: 100 }),
+      listGoals()
+    ]);
+
+    const todayStr = now.toDateString();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const todaySpending = tx.items
+      .filter((t) => t.type === 'expense')
+      .filter((t) => new Date(t.occurredAt).toDateString() === todayStr)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const weeklySpending = tx.items
+      .filter((t) => t.type === 'expense')
+      .filter((t) => new Date(t.occurredAt) >= weekAgo)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    setFinancialData({
+      totalBalance: summary.totalBalance,
+      monthlyIncome: summary.income,
+      monthlyExpenses: summary.expenses,
+      monthlyBudget: user?.monthlyIncome ?? 0,
+      todaySpending,
+      weeklySpending,
+      remainingBudget: summary.remainingBudget,
+      spendingByCategory: summary.spendingByCategory
+    });
+
+    setRecentTransactions(
+      tx.items.slice(0, 3).map((t) => ({
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        category: t.category,
+        description: t.description,
+        date: t.occurredAt
+      }))
+    );
+
+    setUserGoals(
+      goals
+        .slice(0, 4)
+        .map((g) => ({
+          id: g.id,
+          name: g.name,
+          targetAmount: g.targetAmount,
+          currentAmount: g.currentAmount,
+          targetDate: g.targetDate,
+          emoji: g.emoji ?? '',
+          color: g.color ?? 'bg-gradient-to-br from-amber-400 to-orange-500',
+          category: g.category ?? 'Other'
+        }))
+    );
   };
 
   useEffect(() => {
-    refreshData();
-  }, []);
+    refreshData().catch((err) => {
+      console.error('Failed to load dashboard data:', err);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Handle modal close and refresh data
   const handleModalClose = () => {
@@ -53,16 +129,20 @@ export const Dashboard = () => {
     let score = 50; // Base score
 
     // Budget adherence (30 points)
-    const budgetUsage = financialData.monthlyExpenses / financialData.monthlyBudget;
-    if (budgetUsage <= 0.7) score += 30;
-    else if (budgetUsage <= 0.85) score += 20;
-    else if (budgetUsage <= 1.0) score += 10;
+    if (financialData.monthlyBudget > 0) {
+      const budgetUsage = financialData.monthlyExpenses / financialData.monthlyBudget;
+      if (budgetUsage <= 0.7) score += 30;
+      else if (budgetUsage <= 0.85) score += 20;
+      else if (budgetUsage <= 1.0) score += 10;
+    }
 
     // Savings rate (25 points)
-    const savingsRate = (financialData.monthlyIncome - financialData.monthlyExpenses) / financialData.monthlyIncome;
-    if (savingsRate >= 0.2) score += 25;
-    else if (savingsRate >= 0.1) score += 15;
-    else if (savingsRate >= 0.05) score += 10;
+    if (financialData.monthlyIncome > 0) {
+      const savingsRate = (financialData.monthlyIncome - financialData.monthlyExpenses) / financialData.monthlyIncome;
+      if (savingsRate >= 0.2) score += 25;
+      else if (savingsRate >= 0.1) score += 15;
+      else if (savingsRate >= 0.05) score += 10;
+    }
 
     // Transaction consistency (15 points)
     if (recentTransactions.length >= 3) score += 15;
@@ -110,44 +190,6 @@ export const Dashboard = () => {
     }
   };
 
-
-
-  // Animation controls
-  const controls = useAnimation();
-  const y = useMotionValue(0);
-
-  const handlePullStart = () => {
-    controls.stop();
-  };
-
-  const handlePull = (_: any, info: any) => {
-    if (info.offset.y > 0) {
-      y.set(info.offset.y);
-    } else {
-      y.set(0);
-    }
-  };
-
-  const handlePullEnd = (_: any, info: any) => {
-    if (info.offset.y > 100) {
-      setRefreshing(true);
-      // Simulate refresh
-      setTimeout(() => {
-        setRefreshing(false);
-        controls.start({
-          y: 0,
-          transition: { type: 'spring', stiffness: 300, damping: 30 }
-        });
-      }, 2000);
-    } else {
-      controls.start({
-        y: 0,
-        transition: { type: 'spring', stiffness: 300, damping: 30 }
-      });
-    }
-    y.set(0);
-  };
-
   // Navigate back to dashboard
   const navigateToDashboard = () => {
     setCurrentScreen('dashboard');
@@ -171,17 +213,8 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="w-full min-h-screen pb-24 relative">
-      <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.1}
-        onDragStart={handlePullStart}
-        onDrag={handlePull}
-        onDragEnd={handlePullEnd}
-        animate={controls}
-        className="w-full max-w-md mx-auto"
-      >
+    <div className="w-full h-[100dvh] overflow-y-auto overscroll-y-contain relative pb-[calc(env(safe-area-inset-bottom)+128px)]">
+      <div className="w-full max-w-md mx-auto">
         <div className="px-6 pt-16 pb-8 space-y-8">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -192,7 +225,7 @@ export const Dashboard = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
               >
-                {getTimeBasedGreeting()}, Daniella!
+                {getTimeBasedGreeting()}, {user?.name || user?.email || 'there'}!
               </motion.h1>
               <motion.p
                 className="text-gray-600 dark:text-gray-300 mt-1"
@@ -200,7 +233,7 @@ export const Dashboard = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
               >
-                {refreshing ? 'Refreshing your data...' : 'Ready to manage your budget?'}
+                Ready to manage your budget?
               </motion.p>
             </div>
             <motion.div
@@ -212,7 +245,9 @@ export const Dashboard = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <span className="text-white font-bold text-lg">D</span>
+              <span className="text-white font-bold text-lg">
+                {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
+              </span>
             </motion.div>
           </div>
 
@@ -272,7 +307,11 @@ export const Dashboard = () => {
           {/* Budget Ring */}
           <div className="mt-6 flex justify-center" onClick={() => setCurrentScreen('analytics')}>
             <BudgetRing
-              percentage={Math.round((financialData.monthlyExpenses / financialData.monthlyBudget) * 100)}
+              percentage={
+                financialData.monthlyBudget > 0
+                  ? Math.round((financialData.monthlyExpenses / financialData.monthlyBudget) * 100)
+                  : 0
+              }
               spent={financialData.monthlyExpenses}
               total={financialData.monthlyBudget}
               currency="₦"
@@ -334,13 +373,13 @@ export const Dashboard = () => {
 
           {/* Quick Goals Section */}
           <motion.div
-            className="mt-6 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-soft border border-white/20"
+            className="mt-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-soft border border-white/20 dark:border-gray-700/20"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.8 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold font-display text-gray-800">Quick Goals</h3>
+              <h3 className="text-lg font-bold font-display text-gray-800 dark:text-gray-200">Quick Goals</h3>
               <button
                 className="text-primary-600 text-sm font-medium hover:text-primary-700 transition-colors"
                 onClick={() => setCurrentScreen('goals')}
@@ -361,7 +400,7 @@ export const Dashboard = () => {
                 return (
                   <motion.div
                     key={goal.id}
-                    className="bg-white/60 backdrop-blur-sm rounded-xl p-3 hover:bg-white/80 transition-all duration-300 cursor-pointer border border-white/20 shadow-sm hover:shadow-md"
+                    className="bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm rounded-xl p-3 hover:bg-white/80 dark:hover:bg-gray-900/60 transition-all duration-300 cursor-pointer border border-white/20 dark:border-gray-700/30 shadow-sm hover:shadow-md"
                     whileHover={{ scale: 1.02, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                     initial={{ opacity: 0, y: 20 }}
@@ -374,11 +413,11 @@ export const Dashboard = () => {
                         <div className={`w-6 h-6 rounded-full ${goal.color} flex items-center justify-center shadow-sm`}>
                           {getGoalIcon(goal.category)}
                         </div>
-                        <span className="font-medium text-gray-800 text-sm">{goal.name}</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-200 text-sm">{goal.name}</span>
                       </div>
-                      <span className="text-xs text-gray-500">{progress}%</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{progress}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                       <motion.div
                         className={`${goal.color} rounded-full h-2 shadow-sm`}
                         initial={{ width: 0 }}
@@ -386,7 +425,7 @@ export const Dashboard = () => {
                         transition={{ duration: 1, delay: 1.0 + index * 0.1 }}
                       />
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">
+                    <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                       ₦{goal.currentAmount.toLocaleString()} / ₦{goal.targetAmount.toLocaleString()}
                     </div>
                   </motion.div>
@@ -416,13 +455,13 @@ export const Dashboard = () => {
 
           {/* Recent Activity Section */}
           <motion.div
-            className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-soft border border-white/20"
+            className="mt-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-soft border border-white/20 dark:border-gray-700/20"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.0 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold font-display text-gray-800">Recent Activity</h3>
+              <h3 className="text-lg font-bold font-display text-gray-800 dark:text-gray-200">Recent Activity</h3>
               <button
                 className="text-primary-600 text-sm font-medium hover:text-primary-700 transition-colors"
                 onClick={() => setCurrentScreen('transactions')}
@@ -469,19 +508,19 @@ export const Dashboard = () => {
                   return (
                     <motion.div
                       key={transaction.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50/50 hover:bg-gray-100/50 transition-colors cursor-pointer"
+                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100/50 dark:hover:bg-gray-900/60 transition-colors cursor-pointer"
                       whileHover={{ x: 4 }}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 1.2 + index * 0.1 }}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-lg">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-lg">
                           {getCategoryIcon(transaction.category)}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-800 text-sm">{transaction.description}</p>
-                          <p className="text-xs text-gray-500">{transaction.category} • {getTimeAgo(transaction.date)}</p>
+                          <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">{transaction.description}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{transaction.category} • {getTimeAgo(transaction.date)}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -520,7 +559,7 @@ export const Dashboard = () => {
             </div>
           </motion.div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Bottom Navigation */}
       <BottomNavigation

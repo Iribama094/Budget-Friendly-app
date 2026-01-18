@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X as XIcon, Calendar as CalendarIcon, FileText as FileTextIcon, Camera as CameraIcon, CheckCircle as CheckCircleIcon, Coffee as CoffeeIcon, ShoppingBag as ShoppingBagIcon, Car as CarIcon, Zap as ZapIcon, Briefcase as BriefcaseIcon, DollarSign as DollarSignIcon, Gift as GiftIcon, TrendingUp as TrendingUpIcon, Clock as ClockIcon, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import { addTransaction, validateAmount, validateDescription, validateCategory } from '../../utils/dataManager';
+import { validateAmount, validateDescription, validateCategory } from '../../utils/dataManager';
+import { createTransaction } from '../../utils/api/endpoints';
 interface AddTransactionModalProps {
   onClose: () => void;
 }
@@ -127,7 +128,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   };
   // Save transaction with validation
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isSubmitting) return;
 
     setIsSubmitting(true);
@@ -136,19 +137,19 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     // Validate amount
     const amountValidation = validateAmount(amount);
     if (!amountValidation.isValid) {
-      newErrors.amount = amountValidation.error!;
+      newErrors.amount = amountValidation.error ?? 'Invalid amount';
     }
 
     // Validate category
     const categoryValidation = validateCategory(selectedCategory || '');
     if (!categoryValidation.isValid) {
-      newErrors.category = categoryValidation.error!;
+      newErrors.category = categoryValidation.error ?? 'Invalid category';
     }
 
     // Validate description (notes)
     const descriptionValidation = validateDescription(notes || 'Transaction');
     if (!descriptionValidation.isValid) {
-      newErrors.notes = descriptionValidation.error!;
+      newErrors.notes = descriptionValidation.error ?? 'Invalid description';
     }
 
     setErrors(newErrors);
@@ -160,16 +161,23 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
 
     try {
-      // Save transaction to localStorage
-      const transaction = addTransaction({
+      if (!selectedCategory) {
+        setErrors({ category: 'Please select a category' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const categoryOption = activeCategories.find((c) => c.id === selectedCategory);
+      const categoryName = categoryOption?.name ?? selectedCategory;
+
+      await createTransaction({
         type: transactionType,
         amount: parseFloat(amount),
-        category: selectedCategory!,
+        category: categoryName,
         description: notes || 'Transaction',
-        date: date.toISOString().split('T')[0]
+        occurredAt: date.toISOString()
       });
 
-      console.log('Transaction saved:', transaction);
       setShowSuccess(true);
 
       setTimeout(() => {

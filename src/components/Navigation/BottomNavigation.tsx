@@ -38,41 +38,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     }
   ];
 
-  const getActiveStyles = (isActive: boolean, color: string) => {
-    if (!isActive) return 'text-gray-400';
-    
-    switch (color) {
-      case 'primary':
-        return 'text-primary-600';
-      case 'secondary':
-        return 'text-secondary-600';
-      case 'accent':
-        return 'text-accent-600';
-      default:
-        return 'text-primary-600';
-    }
-  };
-
-  const getBackgroundStyles = (isActive: boolean, color: string) => {
-    if (!isActive) return 'bg-transparent';
-    
-    switch (color) {
-      case 'primary':
-        return 'bg-primary-50 border-primary-100';
-      case 'secondary':
-        return 'bg-secondary-50 border-secondary-100';
-      case 'accent':
-        return 'bg-accent-50 border-accent-100';
-      default:
-        return 'bg-primary-50 border-primary-100';
-    }
-  };
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
       {/* Modern floating navigation */}
-      <div className="flex justify-center pb-6 px-6">
-        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-large border border-white/30 px-2 py-2">
+      <div className="mx-auto w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom)+8px)]">
+        <div className="bg-white/90 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl shadow-large border border-white/30 dark:border-gray-700/30 px-2 py-2">
           <div className="flex items-center space-x-2">
             {navItems.map((item) => {
               const isActive = currentScreen === item.id;
@@ -135,9 +105,6 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Safe area for iOS */}
-      <div className="h-6 bg-transparent"></div>
     </div>
   );
 };

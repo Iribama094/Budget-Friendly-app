@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: budget-mock
+    env: docker
+    dockerfilePath: Dockerfile
+    branch: main
+    autodeploy: true
+    plan: free
+    region: oregon
+    ports:
+      - 3002

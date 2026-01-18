@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { OnboardingContainer } from './components/Onboarding/OnboardingContainer';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { LoginPage } from './components/Auth/LoginPage';
 import { SplashScreen } from './components/Splash/SplashScreen';
 import { AppBackground } from './components/Background/AppBackground';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { useAuth } from './contexts/AuthContext';
+
+const ONBOARDING_SEEN_KEY = 'bf_onboarding_seen_v1';
 
 export function App() {
+  const { user } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<'splash' | 'onboarding' | 'login' | 'dashboard'>('splash');
 
+  useEffect(() => {
+    if (currentScreen === 'login' && user) setCurrentScreen('dashboard');
+    if (currentScreen === 'dashboard' && !user) setCurrentScreen('login');
+  }, [currentScreen, user]);
+
   const handleSplashComplete = () => {
-    setCurrentScreen('onboarding');
+    const hasSeenOnboarding = localStorage.getItem(ONBOARDING_SEEN_KEY) === 'true';
+    if (!hasSeenOnboarding) {
+      setCurrentScreen('onboarding');
+      return;
+    }
+    setCurrentScreen(user ? 'dashboard' : 'login');
   };
 
   const handleOnboardingComplete = () => {
+    localStorage.setItem(ONBOARDING_SEEN_KEY, 'true');
     setCurrentScreen('login');
   };
 
