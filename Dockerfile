@@ -1,13 +1,16 @@
 FROM node:20-slim
 WORKDIR /app
 
-# install only production deps (express is required)
+# Install dependencies (including build tools)
 COPY package.json package-lock.json* ./
-RUN npm install --production --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
-# copy app
-COPY dev-mock-server.js ./
+# Copy repository
+COPY . .
+
+# Build the server (bundle TypeScript with esbuild)
+RUN npx esbuild server/index.ts --bundle --platform=node --target=node20 --outfile=dist/server.js
 
 ENV PORT=3002
 EXPOSE 3002
-CMD ["node", "dev-mock-server.js"]
+CMD ["node", "dist/server.js"]
