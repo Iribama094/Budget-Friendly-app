@@ -9,7 +9,7 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 
 # Build the server (bundle TypeScript with esbuild)
-RUN npx esbuild server/index.ts --bundle --platform=node --target=node20 --outfile=dist/server.js
+RUN npx esbuild server/index.ts --bundle --platform=node --target=node20 --outfile=dist/server.js --external:cors
 
 ENV PORT=3002
 EXPOSE 3002
